@@ -15,7 +15,7 @@ accompanistPermissions = "0.37.3"
 roomRuntime = "2.7.1"
 roomKtx = "2.7.1"
 roomCompiler = "2.7.1"
-ksp = "2.2.0-RC-2.0.1"
+ksp = "2.0.21-1.0.28"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
