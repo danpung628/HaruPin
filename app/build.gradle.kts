@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.secrets.gradle.plugin)
 }
 
@@ -52,6 +53,9 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.play.services.maps)
     implementation(libs.accompanist.permissions)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
