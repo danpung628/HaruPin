@@ -14,3 +14,10 @@ fun MemoScreen(navController: NavController) {
         Text("메모 작성 화면입니다")
     }
 }
+
+@Composable
+fun MemoScreen(navController: NavController, lat: Double, lng: Double) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(text=lat.toString() + lng.toString())
+    }
+}
