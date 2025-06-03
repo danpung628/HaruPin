@@ -46,4 +46,10 @@ interface MemoDao {
      */
     @Delete
     suspend fun deleteMemo(memo: MemoEntity)
+
+
+    //id 기준으로 데이터를 들고옴.
+    @Query("SELECT * FROM MemoTable WHERE id = :id")
+    fun getById(id: Int): Flow<List<MemoEntity>>
+
 }
