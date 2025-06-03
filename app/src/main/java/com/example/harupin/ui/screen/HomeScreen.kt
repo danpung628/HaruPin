@@ -65,7 +65,7 @@ fun HomeScreen(navController: NavController) {
             ),
             onMapLongClick = { _, latlng ->
                 //문자 열로 송신
-                navController.navigate("memo/?lat=${latlng.latitude}&lng=${latlng.longitude}")
+                navController.navigate("memo?lat=${latlng.latitude}&lng=${latlng.longitude}")
                 //Navgraph로 memo 작성으로 연결
             }
         ) {
@@ -87,7 +87,7 @@ fun HomeScreen(navController: NavController) {
             ),
             onMapLongClick = { _, latlng ->
                 //문자 열로 송신
-                navController.navigate("memo/?lat=${latlng.latitude}&lng=${latlng.longitude}")
+                navController.navigate("memo?lat=${latlng.latitude}&lng=${latlng.longitude}")
                 //Navgraph로 memo 작성으로 연결
             }
         )
