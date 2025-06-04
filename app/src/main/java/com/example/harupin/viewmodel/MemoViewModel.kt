@@ -24,7 +24,12 @@ class MemoViewModelFactory(
 }
 
 class MemoViewModel(private val repository: MemoRepository) : ViewModel() {
-
+    fun updateMemoFavorite(memoId: Int, isFavorite: Boolean) {
+        viewModelScope.launch {
+            repository.updateMemoFavorite(memoId, isFavorite)
+            getAllMemos() // 리스트 새로고침
+        }
+    }
     // 메모 전체 목록을 Flow로 노출
     val allMemos: StateFlow<List<MemoEntity>> =
         repository.getAllMemos()

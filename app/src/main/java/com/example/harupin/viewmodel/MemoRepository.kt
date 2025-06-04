@@ -1,5 +1,6 @@
 package com.example.harupin.viewmodel
 
+import com.example.harupin.roomDB.MemoDao
 import com.example.harupin.roomDB.MemoDatabase
 import com.example.harupin.roomDB.MemoEntity
 import kotlinx.coroutines.flow.Flow
@@ -28,4 +29,8 @@ class MemoRepository(private val db: MemoDatabase) {
 
     fun filterMemosByYearAndMonth(year: String, month: String) =
         dao.filterMemosByYearAndMonth("$year-$month%")
+
+    suspend fun updateMemoFavorite(memoId: Int, isFavorite: Boolean) {
+        dao.updateMemoFavorite(memoId, isFavorite)
+    }
 }
