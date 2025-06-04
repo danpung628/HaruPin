@@ -68,4 +68,6 @@ interface MemoDao {
     @Query("SELECT * FROM MemoTable WHERE id = :id")
     fun getById(id: Int): Flow<List<MemoEntity>>
 
+    @Query("UPDATE MemoTable SET isFavorite = :isFavorite WHERE id = :id")
+    suspend fun updateMemoFavorite(id: Int, isFavorite: Boolean)
 }

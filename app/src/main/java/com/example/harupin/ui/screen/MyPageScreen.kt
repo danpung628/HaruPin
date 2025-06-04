@@ -49,12 +49,21 @@ fun MyPageScreen(navController: NavController) {
         viewModel.getAllMemos()
     }
 
+    // 햄버거바가 열릴 때마다 상태 초기화
+    LaunchedEffect(drawerState.isOpen) {
+        if (drawerState.isOpen) {
+            expandedYears = setOf()
+            expandedMonths = setOf()
+        }
+    }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
                 DrawerContent(
-                    memos = displayMemos,
+                    allMemos = allMemos, // 전체 메모 리스트 전달
+                    displayMemos = displayMemos, // 현재 표시되는 메모 리스트 전달
                     onYearSelected = { year ->
                         expandedYears = if (expandedYears.contains(year)) {
                             expandedYears - year
@@ -64,18 +73,23 @@ fun MyPageScreen(navController: NavController) {
                         viewModel.filterMemosByYear(null) // 기본적으로 전체 메모 표시
                     },
                     onMonthSelected = { year, month ->
-                        val monthKey = "$year-$month"
-                        expandedMonths = if (expandedMonths.contains(monthKey)) {
-                            expandedMonths - monthKey
-                        } else {
-                            expandedMonths + monthKey
-                        }
                         viewModel.filterMemosByYearAndMonth(year, month) // 월 클릭 시 해당 연도-월 필터링
+                        // 상태 초기화를 먼저 하고 햄버거바 닫기
+                        expandedYears = setOf()
+                        expandedMonths = setOf()
+                        coroutineScope.launch {
+                            drawerState.close()
+                        }
                     },
                     onMemoSelected = { memo ->
                         // 메모 상세 화면으로 내비게이션 경로 설정
-                        //navController.navigate("memo_detail/${memo.id}")
-                        coroutineScope.launch { drawerState.close() }
+                        navController.navigate("memo_detail/${memo.id}")
+                        // 상태 초기화를 먼저 하고 햄버거바 닫기
+                        expandedYears = setOf()
+                        expandedMonths = setOf()
+                        coroutineScope.launch {
+                            drawerState.close()
+                        }
                     },
                     expandedYears = expandedYears,
                     expandedMonths = expandedMonths
@@ -89,8 +103,17 @@ fun MyPageScreen(navController: NavController) {
                     title = { Text(text = "마이페이지") },
                     navigationIcon = {
                         IconButton(onClick = {
-                            coroutineScope.launch {
-                                if (drawerState.isOpen) drawerState.close() else drawerState.open()
+                            if (drawerState.isOpen) {
+                                // 상태 초기화를 먼저 하고 햄버거바 닫기
+                                expandedYears = setOf()
+                                expandedMonths = setOf()
+                                coroutineScope.launch {
+                                    drawerState.close()
+                                }
+                            } else {
+                                coroutineScope.launch {
+                                    drawerState.open()
+                                }
                             }
                         }) {
                             Icon(
@@ -101,11 +124,6 @@ fun MyPageScreen(navController: NavController) {
                     }
                 )
             },
-            floatingActionButton = {
-                FloatingActionButton(onClick = { /* 메모 추가 화면으로 이동 */ }) {
-                    Icon(Icons.Default.Add, contentDescription = "메모 추가")
-                }
-            }
         ) { contentPadding ->
             Column(
                 modifier = Modifier
@@ -120,83 +138,59 @@ fun MyPageScreen(navController: NavController) {
 
 @Composable
 fun DrawerContent(
-    memos: List<MemoEntity>,
+    allMemos: List<MemoEntity>, // 전체 메모 리스트 (연도/월 목록 생성용)
+    displayMemos: List<MemoEntity>, // 현재 표시되는 메모 리스트 (메모 선택용)
     onYearSelected: (String) -> Unit,
     onMonthSelected: (String, String) -> Unit,
     onMemoSelected: (MemoEntity) -> Unit,
     expandedYears: Set<String>,
     expandedMonths: Set<String>
 ) {
-    // 연도 목록 추출 (최신순)
-    val years = memos.map { it.date.split("-")[0] }.distinct().sortedDescending()
+    // 전체 메모를 기준으로 연도 목록 추출 (최신순)
+    val years = allMemos.map { it.date.split("-")[0] }.distinct().sortedDescending()
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = Modifier.fillMaxWidth()
     ) {
-        this@LazyColumn.items(years) { year ->
+        years.forEach { year ->
             // 연도 항목
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onYearSelected(year) }
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = "${year}년",
-                    fontSize = 18.sp,
-                    modifier = Modifier.weight(1f)
-                )
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onYearSelected(year) }
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = "${year}년",
+                        fontSize = 18.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
 
             // 선택된 연도일 경우 월 목록 표시
             if (expandedYears.contains(year)) {
-                val months = memos
+                val months = allMemos // 전체 메모를 기준으로 월 목록 생성
                     .filter { it.date.startsWith(year) }
                     .map { it.date.split("-")[1] }
                     .distinct()
                     .sortedDescending() // 월 최신순 정렬
 
-                this@LazyColumn.items(months) { month ->
+                months.forEach { month ->
                     // 월 항목 (들여쓰기)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onMonthSelected(year, month) }
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(
-                            text = "${month}월",
-                            fontSize = 16.sp,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    // 선택된 월일 경우 메모 목록 표시
-                    if (expandedMonths.contains("$year-$month")) {
-                        val monthMemos = memos
-                            .filter { it.date.startsWith("$year-$month") }
-                        // MemoDao에서 date DESC, time DESC로 정렬됨
-
-                        this@LazyColumn.items(monthMemos) { memo ->
-                            // 메모 항목 (추가 들여쓰기)
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onMemoSelected(memo) }
-                                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                            ) {
-                                Spacer(modifier = Modifier.width(32.dp))
-                                Column(
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(text = memo.title, fontSize = 14.sp)
-                                    Text(text = "날짜: ${memo.date} ${memo.time}", fontSize = 12.sp)
-                                    Text(text = "위치: ${memo.locationName ?: "N/A"}", fontSize = 12.sp)
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                }
-                            }
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onMonthSelected(year, month) }
+                                .padding(horizontal = 32.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = "${month}월",
+                                fontSize = 16.sp,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
                 }

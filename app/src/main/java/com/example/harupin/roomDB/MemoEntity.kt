@@ -23,6 +23,6 @@ data class MemoEntity(
     val weather: String,            // 날씨 정보 (예: 맑음, 흐림)
     val temperature: Double?,       // 기온 정보
 
-    val imageUri: String?           // 이미지 URI (로컬 저장소 경로 또는 Content URI)
+    val imageUri: String?,          // 이미지 URI (로컬 저장소 경로 또는 Content URI)
+    val isFavorite: Boolean? = false // 즐겨찾기 여부
 )
-
