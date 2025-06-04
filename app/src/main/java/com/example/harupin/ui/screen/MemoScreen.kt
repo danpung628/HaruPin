@@ -237,6 +237,7 @@ fun MemoScreen(
                     )
                     viewModel.insertMemo(memo)
                     isEditMode = false
+                    navController.navigate("home")
                     //navController.popBackStack()
                 },
                 modifier = Modifier.fillMaxWidth()
