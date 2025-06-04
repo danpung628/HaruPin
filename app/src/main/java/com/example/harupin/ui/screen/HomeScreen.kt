@@ -5,12 +5,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.harupin.roomDB.MemoDatabase
 import com.example.harupin.ui.component.ShowMarker
+import com.example.harupin.viewmodel.MemoRepository
+import com.example.harupin.viewmodel.MemoViewModel
+import com.example.harupin.viewmodel.MemoViewModelFactory
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -30,6 +38,13 @@ import com.naver.maps.map.compose.rememberMarkerState
 @OptIn(ExperimentalNaverMapApi::class, ExperimentalPermissionsApi::class)
 @Composable
 fun HomeScreen(navController: NavController) {
+    //DB정보
+    val context = LocalContext.current
+    val database = MemoDatabase.getDatabase(context)
+    val repository = MemoRepository(database)
+    val viewModel: MemoViewModel = viewModel(factory = MemoViewModelFactory(repository))
+    val allMemos by viewModel.allMemos.collectAsState()
+
 
     //권한 정보==================
     val permissionsState = rememberMultiplePermissionsState(
@@ -69,7 +84,9 @@ fun HomeScreen(navController: NavController) {
                 //Navgraph로 memo 작성으로 연결
             }
         ) {
-
+            allMemos.forEach { memo ->
+                ShowMarker(memo, navController)
+            }
         }
     }
 
@@ -92,7 +109,9 @@ fun HomeScreen(navController: NavController) {
             }
         )
         {
-
+            allMemos.forEach { memo ->
+                ShowMarker(memo, navController)
+            }
         }
     }
 
