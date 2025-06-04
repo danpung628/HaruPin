@@ -74,7 +74,7 @@ fun MyPageScreen(navController: NavController) {
                     },
                     onMemoSelected = { memo ->
                         // 메모 상세 화면으로 내비게이션 경로 설정
-                        navController.navigate("memo_detail/${memo.id}")
+                        //navController.navigate("memo_detail/${memo.id}")
                         coroutineScope.launch { drawerState.close() }
                     },
                     expandedYears = expandedYears,
