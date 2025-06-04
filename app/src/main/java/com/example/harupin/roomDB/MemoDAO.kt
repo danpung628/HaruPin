@@ -47,6 +47,22 @@ interface MemoDao {
     @Delete
     suspend fun deleteMemo(memo: MemoEntity)
 
+    /**
+     * 지정된 연도에 해당하는 메모들을 반환한다.
+     * date 필드가 yearPattern(예: '2025%')으로 시작하는 메모를 필터링.
+     * 최신 메모가 먼저 오도록 날짜 및 시간 기준으로 내림차순 정렬.
+     */
+    @Query("SELECT * FROM MemoTable WHERE date LIKE :yearPattern ORDER BY date DESC, time DESC")
+    fun filterMemosByYear(yearPattern: String): Flow<List<MemoEntity>>
+
+    /**
+     * 지정된 연도와 월에 해당하는 메모들을 반환한다.
+     * date 필드가 yearMonthPattern(예: '2025-06%')으로 시작하는 메모를 필터링.
+     * 최신 메모가 먼저 오도록 날짜 및 시간 기준으로 내림차순 정렬.
+     */
+    @Query("SELECT * FROM MemoTable WHERE date LIKE :yearMonthPattern ORDER BY date DESC, time DESC")
+    fun filterMemosByYearAndMonth(yearMonthPattern: String): Flow<List<MemoEntity>>
+
 
     //id 기준으로 데이터를 들고옴.
     @Query("SELECT * FROM MemoTable WHERE id = :id")

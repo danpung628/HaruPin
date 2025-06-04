@@ -67,4 +67,40 @@ class MemoViewModel(private val repository: MemoRepository) : ViewModel() {
             }
         }
     }
+
+    fun getAllMemos() {
+        viewModelScope.launch {
+            repository.getAllMemos().collect {
+                _searchResults.value = it
+            }
+        }
+    }
+
+    fun filterMemosByYear(year: String?) {
+        viewModelScope.launch {
+            if (year == null) {
+                repository.getAllMemos().collect { memoList ->
+                    _searchResults.value = memoList
+                }
+            } else {
+                repository.filterMemosByYear(year).collect { memoList ->
+                    _searchResults.value = memoList
+                }
+            }
+        }
+    }
+
+    fun filterMemosByYearAndMonth(year: String?, month: String?) {
+        viewModelScope.launch {
+            if (year == null || month == null) {
+                repository.getAllMemos().collect { memoList ->
+                    _searchResults.value = memoList
+                }
+            } else {
+                repository.filterMemosByYearAndMonth(year, month).collect { memoList ->
+                    _searchResults.value = memoList
+                }
+            }
+        }
+    }
 }

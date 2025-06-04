@@ -20,7 +20,12 @@ class MemoRepository(private val db: MemoDatabase) {
         dao.deleteMemo(memoEntity)
     }
 
-    fun getAllMemos(): Flow<List<MemoEntity>> = dao.getAllMemos()
+    fun getAllMemos() = dao.getAllMemos()
 
-    fun searchMemos(keyword: String): Flow<List<MemoEntity>> = dao.searchMemo(keyword)
+    fun searchMemos(keyword: String) = dao.searchMemo(keyword)
+
+    fun filterMemosByYear(year: String) = dao.filterMemosByYear("$year%")
+
+    fun filterMemosByYearAndMonth(year: String, month: String) =
+        dao.filterMemosByYearAndMonth("$year-$month%")
 }
