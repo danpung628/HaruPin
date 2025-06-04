@@ -6,10 +6,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Favorite // 하트 아이콘 추가
+import androidx.compose.material.icons.filled.FavoriteBorder // 비어있는 하트 아이콘 추가
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Star // 별 아이콘 추가
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color // 색상 처리를 위해 추가
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -38,8 +43,16 @@ fun MyPageScreen(navController: NavController) {
     val allMemos by viewModel.allMemos.collectAsState()
     val filteredMemos by viewModel.searchResults.collectAsState()
 
+    // 즐겨찾기 필터 상태 추가
+    var showOnlyFavorites by remember { mutableStateOf(false) }
+
     // 현재 표시할 메모 목록 결정
-    val displayMemos = if (filteredMemos.isEmpty() && allMemos.isNotEmpty()) allMemos else filteredMemos
+    val baseMemos = if (filteredMemos.isEmpty() && allMemos.isNotEmpty()) allMemos else filteredMemos
+    val displayMemos = if (showOnlyFavorites) {
+        baseMemos.filter { it.isFavorite == true } // 즐겨찾기 필터링
+    } else {
+        baseMemos
+    }
 
     var expandedYears by remember { mutableStateOf(setOf<String>()) }
     var expandedMonths by remember { mutableStateOf(setOf<String>()) }
@@ -62,19 +75,18 @@ fun MyPageScreen(navController: NavController) {
         drawerContent = {
             ModalDrawerSheet {
                 DrawerContent(
-                    allMemos = allMemos, // 전체 메모 리스트 전달
-                    displayMemos = displayMemos, // 현재 표시되는 메모 리스트 전달
+                    allMemos = allMemos,
+                    displayMemos = displayMemos,
                     onYearSelected = { year ->
                         expandedYears = if (expandedYears.contains(year)) {
                             expandedYears - year
                         } else {
                             expandedYears + year
                         }
-                        viewModel.filterMemosByYear(null) // 기본적으로 전체 메모 표시
+                        viewModel.filterMemosByYear(null)
                     },
                     onMonthSelected = { year, month ->
-                        viewModel.filterMemosByYearAndMonth(year, month) // 월 클릭 시 해당 연도-월 필터링
-                        // 상태 초기화를 먼저 하고 햄버거바 닫기
+                        viewModel.filterMemosByYearAndMonth(year, month)
                         expandedYears = setOf()
                         expandedMonths = setOf()
                         coroutineScope.launch {
@@ -82,9 +94,7 @@ fun MyPageScreen(navController: NavController) {
                         }
                     },
                     onMemoSelected = { memo ->
-                        // 메모 상세 화면으로 내비게이션 경로 설정
                         navController.navigate("memo_detail/${memo.id}")
-                        // 상태 초기화를 먼저 하고 햄버거바 닫기
                         expandedYears = setOf()
                         expandedMonths = setOf()
                         coroutineScope.launch {
@@ -104,7 +114,6 @@ fun MyPageScreen(navController: NavController) {
                     navigationIcon = {
                         IconButton(onClick = {
                             if (drawerState.isOpen) {
-                                // 상태 초기화를 먼저 하고 햄버거바 닫기
                                 expandedYears = setOf()
                                 expandedMonths = setOf()
                                 coroutineScope.launch {
@@ -121,16 +130,39 @@ fun MyPageScreen(navController: NavController) {
                                 contentDescription = "메뉴 열기"
                             )
                         }
+                    },
+                    actions = {
+                        // 즐겨찾기 필터 버튼 추가
+                        IconButton(onClick = {
+                            showOnlyFavorites = !showOnlyFavorites
+                        }) {
+                            Icon(
+                                imageVector = Icons.Filled.Star,
+                                contentDescription = if (showOnlyFavorites) "전체 보기" else "즐겨찾기만 보기",
+                                tint = if (showOnlyFavorites) Color.Yellow else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 )
             },
+            floatingActionButton = {
+                FloatingActionButton(onClick = { /* 메모 추가 화면으로 이동 */ }) {
+                    Icon(Icons.Default.Add, contentDescription = "메모 추가")
+                }
+            }
         ) { contentPadding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(contentPadding)
             ) {
-                PageList(list = displayMemos)
+                PageList(
+                    list = displayMemos,
+                    navController = navController,
+                    onFavoriteToggle = { memo ->
+                        viewModel.updateMemoFavorite(memo.id, !(memo.isFavorite ?: false)) // 즐겨찾기 상태 토글
+                    }
+                )
             }
         }
     }
@@ -138,22 +170,20 @@ fun MyPageScreen(navController: NavController) {
 
 @Composable
 fun DrawerContent(
-    allMemos: List<MemoEntity>, // 전체 메모 리스트 (연도/월 목록 생성용)
-    displayMemos: List<MemoEntity>, // 현재 표시되는 메모 리스트 (메모 선택용)
+    allMemos: List<MemoEntity>,
+    displayMemos: List<MemoEntity>,
     onYearSelected: (String) -> Unit,
     onMonthSelected: (String, String) -> Unit,
     onMemoSelected: (MemoEntity) -> Unit,
     expandedYears: Set<String>,
     expandedMonths: Set<String>
 ) {
-    // 전체 메모를 기준으로 연도 목록 추출 (최신순)
     val years = allMemos.map { it.date.split("-")[0] }.distinct().sortedDescending()
 
     LazyColumn(
         modifier = Modifier.fillMaxWidth()
     ) {
         years.forEach { year ->
-            // 연도 항목
             item {
                 Row(
                     modifier = Modifier
@@ -169,16 +199,14 @@ fun DrawerContent(
                 }
             }
 
-            // 선택된 연도일 경우 월 목록 표시
             if (expandedYears.contains(year)) {
-                val months = allMemos // 전체 메모를 기준으로 월 목록 생성
+                val months = allMemos
                     .filter { it.date.startsWith(year) }
                     .map { it.date.split("-")[1] }
                     .distinct()
-                    .sortedDescending() // 월 최신순 정렬
+                    .sortedDescending()
 
                 months.forEach { month ->
-                    // 월 항목 (들여쓰기)
                     item {
                         Row(
                             modifier = Modifier
@@ -200,7 +228,11 @@ fun DrawerContent(
 }
 
 @Composable
-fun PageList(list: List<MemoEntity>) {
+fun PageList(
+    list: List<MemoEntity>,
+    navController: NavController,
+    onFavoriteToggle: (MemoEntity) -> Unit // 즐겨찾기 토글 콜백 추가
+) {
     if (list.isEmpty()) {
         Text(
             text = "메모가 없습니다",
@@ -214,17 +246,50 @@ fun PageList(list: List<MemoEntity>) {
     } else {
         LazyColumn {
             items(list) { memo ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(10.dp)
-                ) {
-                    Text(text = memo.title, fontSize = 18.sp)
-                    Text(text = "날짜: ${memo.date} ${memo.time}", fontSize = 14.sp)
-                    Text(text = "위치: ${memo.locationName ?: "N/A"}", fontSize = 14.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
+                Page(
+                    memo = memo,
+                    modifier = Modifier,
+                    onClicked = { navController.navigate("memo?id=${memo.id}") },
+                    onFavoriteToggle = onFavoriteToggle // 즐겨찾기 토글 콜백 전달
+                )
             }
         }
     }
+}
+
+@Composable
+fun Page(
+    memo: MemoEntity,
+    modifier: Modifier = Modifier,
+    onClicked: () -> Unit,
+    onFavoriteToggle: (MemoEntity) -> Unit // 즐겨찾기 토글 콜백 추가
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .clickable { onClicked() }
+        ) {
+            Text(text = memo.title, fontSize = 18.sp)
+            Text(text = "날짜: ${memo.date} ${memo.time}", fontSize = 14.sp)
+            Text(text = "위치: ${memo.locationName ?: "N/A"}", fontSize = 14.sp)
+        }
+
+        // 즐겨찾기 하트 버튼 추가
+        IconButton(
+            onClick = { onFavoriteToggle(memo) }
+        ) {
+            Icon(
+                imageVector = if (memo.isFavorite == true) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                contentDescription = if (memo.isFavorite == true) "즐겨찾기 해제" else "즐겨찾기 추가",
+                tint = if (memo.isFavorite == true) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(8.dp))
 }

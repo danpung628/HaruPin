@@ -1,5 +1,6 @@
 package com.example.harupin.ui.screen
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -109,13 +110,13 @@ fun SearchScreen(navController: NavController) {
                     .padding(16.dp)
             )
         } else {
-            MemoList(list = memos)
+            MemoList(list = memos,navController)
         }
     }
 }
 
 @Composable
-fun MemoList(list: List<MemoEntity>) {
+fun MemoList(list: List<MemoEntity>,navController: NavController) {
     if (list.isEmpty()) {
         Text(
             text = "검색 결과가 없습니다",
@@ -133,6 +134,9 @@ fun MemoList(list: List<MemoEntity>) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(10.dp)
+                        .clickable{ // 누르면 메모 보기로 감
+                            navController.navigate("memo?id=${memo.id}")
+                        }
                 ) {
                     Text(text = memo.title, fontSize = 18.sp)
                     Text(text = "날짜: ${memo.date} ${memo.time}", fontSize = 14.sp)
