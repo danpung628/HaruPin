@@ -17,19 +17,25 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.harupin.roomDB.MemoEntity
-import com.example.harupin.viewmodel.SearchViewModel
-import com.example.harupin.viewmodel.SearchViewModelFactory
+import com.example.harupin.viewmodel.MemoViewModel
+import com.example.harupin.viewmodel.MemoViewModelFactory
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
+import com.example.harupin.roomDB.MemoDatabase
+import com.example.harupin.viewmodel.MemoRepository
 
 @Composable
 fun SearchScreen(navController: NavController) {
     val context = LocalContext.current
-    val viewModel: SearchViewModel = viewModel(factory = SearchViewModelFactory(context))
+    val viewModel: MemoViewModel = viewModel(factory = MemoViewModelFactory(MemoRepository(MemoDatabase.getDatabase(context))))
     var query by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
-    val memos by viewModel.memos.collectAsState()
+    val memos by if (query.isEmpty()) {
+        viewModel.allMemos
+    } else {
+        viewModel.searchResults
+    }.collectAsState(initial = emptyList())
 
     Column(
         modifier = Modifier
@@ -40,6 +46,13 @@ fun SearchScreen(navController: NavController) {
             value = query,
             onValueChange = { newQuery ->
                 query = newQuery // 검색어 상태 업데이트
+                if (newQuery.isEmpty()) {
+                    // 검색어 지우면 전체 메모로 돌아감
+                } else {
+                    isLoading = true
+                    viewModel.searchMemos(newQuery) // 검색 실행
+                    isLoading = false // 실제로는 비동기 처리 후 변경 필요
+                }
             },
             label = { Text("검색") },
             leadingIcon = {
@@ -54,7 +67,7 @@ fun SearchScreen(navController: NavController) {
                     if (query.isNotEmpty()) {
                         IconButton(onClick = {
                             query = "" // 검색어 지우기
-                            viewModel.searchMemos("") // 검색 결과 초기화
+                            // 검색어 지우면 전체 메모로 돌아감
                         }) {
                             Icon(
                                 Icons.Default.Clear,
@@ -64,9 +77,9 @@ fun SearchScreen(navController: NavController) {
                         }
                     }
                     IconButton(onClick = {
-                        isLoading = true // 로딩 시작
+                        isLoading = true
                         viewModel.searchMemos(query) // 검색 실행
-                        isLoading = false // 로딩 종료 (실제로는 searchMemos가 비동기라면 콜백 필요)
+                        isLoading = false // 실제로는 비동기 처리 후 변경 필요
                     }) {
                         Icon(
                             Icons.Default.Search,

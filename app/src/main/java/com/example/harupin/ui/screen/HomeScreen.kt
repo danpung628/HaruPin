@@ -62,7 +62,12 @@ fun HomeScreen(navController: NavController) {
             ),
             uiSettings = MapUiSettings(
                 isLocationButtonEnabled = true
-            )
+            ),
+            onMapLongClick = { _, latlng ->
+                //문자 열로 송신
+                navController.navigate("memo?lat=${latlng.latitude}&lng=${latlng.longitude}")
+                //Navgraph로 memo 작성으로 연결
+            }
         ) {
 
         }
@@ -79,7 +84,12 @@ fun HomeScreen(navController: NavController) {
             ),
             uiSettings = MapUiSettings(
                 isLocationButtonEnabled = true
-            )
+            ),
+            onMapLongClick = { _, latlng ->
+                //문자 열로 송신
+                navController.navigate("memo?lat=${latlng.latitude}&lng=${latlng.longitude}")
+                //Navgraph로 memo 작성으로 연결
+            }
         )
         {
 

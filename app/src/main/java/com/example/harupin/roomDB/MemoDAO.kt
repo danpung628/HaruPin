@@ -32,12 +32,14 @@ interface MemoDao {
     @Query("SELECT * FROM MemoTable ORDER BY date DESC, time DESC")
     fun getAllMemos(): Flow<List<MemoEntity>>
 
+
     /**
      * 제목 또는 위치 이름에 검색어가 포함된 메모들을 반환한다.
      * 최신 메모가 먼저 오도록 날짜 기준으로 정렬한다.
      */
     @Query("SELECT * FROM MemoTable WHERE title LIKE '%' || :keyword || '%' OR locationName LIKE '%' || :keyword || '%' ORDER BY date DESC")
     fun searchMemo(keyword: String): Flow<List<MemoEntity>>
+
 
     /**
      * 특정 메모를 데이터베이스에서 삭제한다.
@@ -60,4 +62,10 @@ interface MemoDao {
      */
     @Query("SELECT * FROM MemoTable WHERE date LIKE :yearMonthPattern ORDER BY date DESC, time DESC")
     fun filterMemosByYearAndMonth(yearMonthPattern: String): Flow<List<MemoEntity>>
+
+
+    //id 기준으로 데이터를 들고옴.
+    @Query("SELECT * FROM MemoTable WHERE id = :id")
+    fun getById(id: Int): Flow<List<MemoEntity>>
+
 }

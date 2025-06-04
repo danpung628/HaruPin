@@ -16,28 +16,45 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.harupin.roomDB.MemoDatabase
 import com.example.harupin.roomDB.MemoEntity
-import com.example.harupin.viewmodel.SearchViewModel
-import com.example.harupin.viewmodel.SearchViewModelFactory
+import com.example.harupin.viewmodel.MemoRepository
+import com.example.harupin.viewmodel.MemoViewModel
+import com.example.harupin.viewmodel.MemoViewModelFactory
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyPageScreen(navController: NavController) {
     val context = LocalContext.current
-    val viewModel: SearchViewModel = viewModel(factory = SearchViewModelFactory(context))
+    val database = MemoDatabase.getDatabase(context)
+    val repository = MemoRepository(database)
+    val viewModel: MemoViewModel = viewModel(factory = MemoViewModelFactory(repository))
+
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
-    val memos by viewModel.memos.collectAsState()
+
+    // allMemos를 기본으로 사용하고, 필터링 시에는 searchResults 사용
+    val allMemos by viewModel.allMemos.collectAsState()
+    val filteredMemos by viewModel.searchResults.collectAsState()
+
+    // 현재 표시할 메모 목록 결정
+    val displayMemos = if (filteredMemos.isEmpty() && allMemos.isNotEmpty()) allMemos else filteredMemos
+
     var expandedYears by remember { mutableStateOf(setOf<String>()) }
     var expandedMonths by remember { mutableStateOf(setOf<String>()) }
+
+    // 컴포넌트 시작 시 전체 메모 로드
+    LaunchedEffect(Unit) {
+        viewModel.getAllMemos()
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
                 DrawerContent(
-                    memos = memos,
+                    memos = displayMemos,
                     onYearSelected = { year ->
                         expandedYears = if (expandedYears.contains(year)) {
                             expandedYears - year
@@ -95,7 +112,7 @@ fun MyPageScreen(navController: NavController) {
                     .fillMaxSize()
                     .padding(contentPadding)
             ) {
-                PageList(list = memos)
+                PageList(list = displayMemos)
             }
         }
     }
@@ -123,6 +140,7 @@ fun DrawerContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onYearSelected(year) }
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(
                     text = "${year}년",
@@ -145,6 +163,7 @@ fun DrawerContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onMonthSelected(year, month) }
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(
@@ -166,6 +185,7 @@ fun DrawerContent(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable { onMemoSelected(memo) }
+                                    .padding(horizontal = 16.dp, vertical = 4.dp)
                             ) {
                                 Spacer(modifier = Modifier.width(32.dp))
                                 Column(
