@@ -2,7 +2,6 @@
 
 package com.example.harupin.ui.nav
 
-import android.R.attr.type
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -20,7 +19,6 @@ fun NavigationGraph(navController: NavHostController) {
         composable("home") { HomeScreen(navController) }
         composable("search") { SearchScreen(navController) }
         composable("mypage") { MyPageScreen(navController) }
-        composable("memo") { MemoScreen(navController) }
         composable(
             route = "memo?lat={lat}&lng={lng}",
             arguments = listOf(

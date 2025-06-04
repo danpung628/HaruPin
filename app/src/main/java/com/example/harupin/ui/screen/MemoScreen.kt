@@ -8,12 +8,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 
-@Composable
-fun MemoScreen(navController: NavController) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("메모 작성 화면입니다")
-    }
-}
+
 
 @Composable
 fun MemoScreen(navController: NavController, lat: Double, lng: Double) {
