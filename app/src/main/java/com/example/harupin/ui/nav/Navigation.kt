@@ -28,7 +28,7 @@ fun NavigationGraph(navController: NavHostController) {
         ) { backStackEntry ->
             val lat = backStackEntry.arguments?.getString("lat")?.toDoubleOrNull() ?: 0.0
             val lng = backStackEntry.arguments?.getString("lng")?.toDoubleOrNull() ?: 0.0
-            MemoScreen(navController, lat, lng)
+            MemoScreen(navController, lat, lng, true)
         }
         //mypage&&searchpage에서 메모 누르면 넘어감
         composable(
@@ -38,7 +38,7 @@ fun NavigationGraph(navController: NavHostController) {
             )
         ) { backStackEntry ->
             val id = backStackEntry.arguments?.getString("id")?.toInt() ?: 0
-            MemoScreen(navController,12.015,123.02)
+            MemoScreen(navController,12.015,123.02, false)
         }
     }
 }
