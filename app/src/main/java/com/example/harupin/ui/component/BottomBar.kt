@@ -27,12 +27,17 @@ fun BottomNavBar(navController: NavController) {
                 icon = { Icon(icons[index], contentDescription = labels[index]) },
                 label = null,
                 selected = currentRoute == screen,
-                onClick = {
-                    if (currentRoute != screen) {
+                onClick  = {
+                    val isSameTab = currentRoute?.startsWith(screen) == true
+
+                    if (isSameTab) {
+                        // **같은 탭**을 다시 눌렀다 → 그 탭 내부 스택만 pop
+                        navController.popBackStack(screen, inclusive = false)
+                    } else {
+                        // **다른 탭**을 눌렀다 → 스택은 살려 두고 화면만 전환
                         navController.navigate(screen) {
-                            popUpTo(navController.graph.startDestinationId) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
+                            launchSingleTop = true      // 중복 인스턴스 방지
+                            restoreState     = true      // 예전 상태 복원
                         }
                     }
                 }
