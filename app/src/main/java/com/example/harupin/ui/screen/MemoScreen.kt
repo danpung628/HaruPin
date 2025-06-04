@@ -46,12 +46,15 @@ import com.example.harupin.viewmodel.MemoViewModelFactory
 fun MemoScreen(
     navController: NavController,
     lat: Double,
-    lng: Double
+    lng: Double,
+    edit: Boolean
 ) {
     val context = LocalContext.current
     val db = MemoDatabase.getDatabase(context)
     val viewModelFactory = MemoViewModelFactory(MemoRepository(db))
     val viewModel: MemoViewModel = viewModel(factory = viewModelFactory)
+
+    var isEditMode by remember { mutableStateOf(edit) }
 
     var title by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
@@ -99,6 +102,17 @@ fun MemoScreen(
                 text = String.format("경도: %.1f 위도: %.1f", lat, lng),
                 style = MaterialTheme.typography.bodyMedium
             )
+            if (isEditMode) {
+                // 편집 중일 때 "취소"로 편집 종료
+                Button(onClick = { isEditMode = false }) {
+                    Text("취소")
+                }
+            } else {
+                // 읽기 전용일 때 "닫기"로 화면 나가기
+                Button(onClick = { navController.popBackStack() }) {
+                    Text("닫기")
+                }
+            }
         }
 
         Row(
@@ -121,7 +135,7 @@ fun MemoScreen(
                                     shape = RoundedCornerShape(50)
                                 ) else Modifier
                             )
-                            .clickable { selectedWeather = emoji },
+                            .clickable(enabled = isEditMode) { selectedWeather = emoji },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(text = emoji, style = MaterialTheme.typography.titleMedium)
@@ -132,6 +146,7 @@ fun MemoScreen(
             // 날짜 선택 버튼 (달력 아이콘 포함)
             OutlinedButton(
                 onClick = { datePickerDialog.show() },
+                enabled = isEditMode,
                 modifier = Modifier
                     .height(48.dp)
                     .width(140.dp),
@@ -162,6 +177,7 @@ fun MemoScreen(
             // 제목 입력란 - 넓게 확장
             OutlinedTextField(
                 value = title,
+                enabled = isEditMode,
                 onValueChange = { title = it },
                 label = { Text("제목") },
                 modifier = Modifier
@@ -172,6 +188,7 @@ fun MemoScreen(
             // 장소 입력란 - 고정 너비
             OutlinedTextField(
                 value = location,
+                enabled = isEditMode,
                 onValueChange = { location = it },
                 label = { Text("장소") },
                 modifier = Modifier
@@ -180,11 +197,12 @@ fun MemoScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+
 
 
         OutlinedTextField(
             value = content,
+            enabled = isEditMode,
             onValueChange = { content = it },
             label = { Text("내용") },
             modifier = Modifier
@@ -192,37 +210,40 @@ fun MemoScreen(
                 .height(150.dp)
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
 
-        Button(
-            onClick = {
-                val year = calendar.get(Calendar.YEAR)
-                val month = calendar.get(Calendar.MONTH) + 1
-                val date = selectedDate
-                val time = "%02d:%02d".format(
-                    calendar.get(Calendar.HOUR_OF_DAY),
-                    calendar.get(Calendar.MINUTE)
-                )
+        if (isEditMode) {
+            Button(
+                onClick = {
+                    val year = calendar.get(Calendar.YEAR)
+                    val month = calendar.get(Calendar.MONTH) + 1
+                    val date = selectedDate
+                    val time = "%02d:%02d".format(
+                        calendar.get(Calendar.HOUR_OF_DAY),
+                        calendar.get(Calendar.MINUTE)
+                    )
 
-                val memo = MemoEntity(
-                    title = title,
-                    content = content,
-                    year = year,
-                    month = month,
-                    date = date,
-                    time = time,
-                    latitude = lat,
-                    longitude = lng,
-                    locationName = location,
-                    weather = selectedWeather.ifEmpty { "☀️" },
-                    imageUri = null
-                )
-                viewModel.insertMemo(memo)
-                navController.popBackStack()
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("메모 저장하기")
+                    val memo = MemoEntity(
+                        title = title,
+                        content = content,
+                        year = year,
+                        month = month,
+                        date = date,
+                        time = time,
+                        latitude = lat,
+                        longitude = lng,
+                        locationName = location,
+                        weather = selectedWeather.ifEmpty { "☀️" },
+                        imageUri = null
+                    )
+                    viewModel.insertMemo(memo)
+                    isEditMode = false
+                    //navController.popBackStack()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("메모 저장하기")
+            }
         }
     }
 }
+
