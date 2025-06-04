@@ -39,7 +39,8 @@ fun MyPageScreen(navController: NavController) {
     val filteredMemos by viewModel.searchResults.collectAsState()
 
     // 현재 표시할 메모 목록 결정
-    val displayMemos = if (filteredMemos.isEmpty() && allMemos.isNotEmpty()) allMemos else filteredMemos
+    val displayMemos =
+        if (filteredMemos.isEmpty() && allMemos.isNotEmpty()) allMemos else filteredMemos
 
     var expandedYears by remember { mutableStateOf(setOf<String>()) }
     var expandedMonths by remember { mutableStateOf(setOf<String>()) }
@@ -130,7 +131,7 @@ fun MyPageScreen(navController: NavController) {
                     .fillMaxSize()
                     .padding(contentPadding)
             ) {
-                PageList(list = displayMemos)
+                PageList(list = displayMemos,navController = navController)
             }
         }
     }
@@ -200,7 +201,7 @@ fun DrawerContent(
 }
 
 @Composable
-fun PageList(list: List<MemoEntity>) {
+fun PageList(list: List<MemoEntity>, navController: NavController) {
     if (list.isEmpty()) {
         Text(
             text = "메모가 없습니다",
@@ -214,17 +215,26 @@ fun PageList(list: List<MemoEntity>) {
     } else {
         LazyColumn {
             items(list) { memo ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(10.dp)
-                ) {
-                    Text(text = memo.title, fontSize = 18.sp)
-                    Text(text = "날짜: ${memo.date} ${memo.time}", fontSize = 14.sp)
-                    Text(text = "위치: ${memo.locationName ?: "N/A"}", fontSize = 14.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
+                Page(memo, Modifier) { -> //메모 누르면 넘어감
+                    navController.navigate("memo?id=${memo.id}")
                 }
             }
         }
     }
+}
+
+@Composable
+fun Page(memo: MemoEntity, modifier: Modifier = Modifier, onClicked: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(10.dp)
+            .clickable{onClicked()}
+    ) {
+        Text(text = memo.title, fontSize = 18.sp)
+        Text(text = "날짜: ${memo.date} ${memo.time}", fontSize = 14.sp)
+        Text(text = "위치: ${memo.locationName ?: "N/A"}", fontSize = 14.sp)
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+
 }
