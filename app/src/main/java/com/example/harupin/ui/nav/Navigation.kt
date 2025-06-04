@@ -30,5 +30,15 @@ fun NavigationGraph(navController: NavHostController) {
             val lng = backStackEntry.arguments?.getString("lng")?.toDoubleOrNull() ?: 0.0
             MemoScreen(navController, lat, lng)
         }
+        //mypage&&searchpage에서 메모 누르면 넘어감
+        composable(
+            route = "memo?id={id}",
+            arguments = listOf(
+                navArgument("id") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("id")?.toInt() ?: 0
+            MemoScreen(navController,12.015,123.02)
+        }
     }
 }
