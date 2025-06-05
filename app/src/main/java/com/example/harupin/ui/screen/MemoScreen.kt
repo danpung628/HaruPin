@@ -228,7 +228,10 @@ fun MemoScreen(
             android.Manifest.permission.READ_EXTERNAL_STORAGE
         }
 
-        val granted = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+        val granted = ContextCompat.checkSelfPermission(
+            context,
+            permission
+        ) == PackageManager.PERMISSION_GRANTED
         hasGalleryPermission = granted
 
         if (!granted) {
@@ -312,16 +315,10 @@ fun MemoScreen(
                 text = String.format("경도: %.1f 위도: %.1f", lat, lng),
                 style = MaterialTheme.typography.bodyMedium
             )
-            if (isEditMode) {
-                // 편집 중일 때 "취소"로 편집 종료
-                Button(onClick = { isEditMode = false }) {
-                    Text("취소")
-                }
-            } else {
-                // 읽기 전용일 때 "닫기"로 화면 나가기
-                Button(onClick = { navController.popBackStack() }) {
-                    Text("닫기")
-                }
+
+            Button(onClick = { navController.popBackStack() }) {
+                Text("닫기")
+
             }
         }
 
@@ -441,7 +438,10 @@ fun MemoScreen(
         } else {
             android.Manifest.permission.READ_EXTERNAL_STORAGE
         }
-        val granted = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+        val granted = ContextCompat.checkSelfPermission(
+            context,
+            permission
+        ) == PackageManager.PERMISSION_GRANTED
         hasGalleryPermission = granted
         if (!granted) permissionLauncher.launch(permission)
     }
@@ -510,7 +510,11 @@ fun MemoScreen(
             location = it.locationName ?: ""
             selectedWeather = it.weather
             selectedDate = it.date
-            imageUris.value = listOfNotNull(it.imageUri1, it.imageUri2, it.imageUri3).map { uri -> Uri.parse(uri) }
+            imageUris.value = listOfNotNull(
+                it.imageUri1,
+                it.imageUri2,
+                it.imageUri3
+            ).map { uri -> Uri.parse(uri) }
 
             // 백업 저장
             originalTitle = it.title
@@ -518,13 +522,19 @@ fun MemoScreen(
             originalLocation = it.locationName ?: ""
             originalWeather = it.weather
             originalDate = it.date
-            originalImages = listOfNotNull(it.imageUri1, it.imageUri2, it.imageUri3).map { uri -> Uri.parse(uri) }
+            originalImages = listOfNotNull(
+                it.imageUri1,
+                it.imageUri2,
+                it.imageUri3
+            ).map { uri -> Uri.parse(uri) }
         }
     }
 
     memo.firstOrNull()?.let { currentMemo ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Row(
@@ -534,7 +544,7 @@ fun MemoScreen(
             ) {
                 Text("경도: %.1f 위도: %.1f".format(currentMemo.latitude, currentMemo.longitude))
                 Button(onClick = {
-                    if (isEditMode){
+                    if (isEditMode) {
                         // 🔁 복구
                         title = originalTitle
                         content = originalContent
@@ -577,7 +587,15 @@ fun MemoScreen(
                 isEnabled = isEditMode
             )
 
-            OutlinedTextField(value = content, onValueChange = { content = it }, label = { Text("내용") }, enabled = isEditMode, modifier = Modifier.fillMaxWidth().height(150.dp))
+            OutlinedTextField(
+                value = content,
+                onValueChange = { content = it },
+                label = { Text("내용") },
+                enabled = isEditMode,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+            )
 
             Text("사진 추가 (최대 3장)", style = MaterialTheme.typography.labelMedium)
             ImageSelector(
