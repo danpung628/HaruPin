@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -149,6 +150,54 @@ fun TitleLocationFields(
         )
     }
 }
+
+@Composable
+fun ImageSelector(
+    imageUris: List<Uri>,
+    onRemoveImage: (Int) -> Unit,
+    onAddImageClick: () -> Unit,
+    isEnabled: Boolean,
+    hasGalleryPermission: Boolean
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        imageUris.forEachIndexed { index, uri ->
+            Box(modifier = Modifier.size(80.dp)) {
+                Image(
+                    painter = rememberAsyncImagePainter(uri),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .border(1.dp, MaterialTheme.colorScheme.primary)
+                )
+                if (isEnabled) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "삭제",
+                        tint = Color.Red,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .size(20.dp)
+                            .clickable { onRemoveImage(index) }
+                    )
+                }
+            }
+        }
+
+        if (imageUris.size < 3 && isEnabled && hasGalleryPermission) {
+            Button(onClick = onAddImageClick, modifier = Modifier.height(80.dp)) {
+                Text("추가")
+            }
+        } else if (!hasGalleryPermission && isEnabled) {
+            Text(
+                text = "사진 추가 권한이 없습니다",
+                color = Color.Red,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.align(Alignment.CenterVertically)
+            )
+        }
+    }
+}
+
 
 @Composable
 fun MemoScreen(
@@ -300,38 +349,15 @@ fun MemoScreen(
 
         Text(text = "사진 추가 (최대 3장)", style = MaterialTheme.typography.labelMedium)
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            // 선택된 이미지 보여주기
-            imageUris.value.forEach { uri ->
-                Image(
-                    painter = rememberAsyncImagePainter(uri),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(80.dp)
-                        .border(1.dp, MaterialTheme.colorScheme.primary)
-                )
-            }
-
-            // 이미지가 3장보다 적을 때만 버튼 보이기
-            if (imageUris.value.size < 3 && isEditMode && hasGalleryPermission) {
-                Button(
-                    onClick = { imagePicker.launch("image/*") },
-                    modifier = Modifier.height(80.dp)
-                ) {
-                    Text("추가")
-                }
-            } else if (!hasGalleryPermission && isEditMode) {
-                Text(
-                    text = "사진 추가 권한이 없습니다",
-                    color = Color.Red,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.align(Alignment.CenterVertically)
-                )
-            }
-        }
+        ImageSelector(
+            imageUris = imageUris.value,
+            onRemoveImage = { index ->
+                imageUris.value = imageUris.value.toMutableList().also { it.removeAt(index) }
+            },
+            onAddImageClick = { imagePicker.launch("image/*") },
+            isEnabled = isEditMode,
+            hasGalleryPermission = hasGalleryPermission
+        )
 
 
         if (isEditMode) {
@@ -490,16 +516,15 @@ fun MemoScreen(
             OutlinedTextField(value = content, onValueChange = { content = it }, label = { Text("내용") }, enabled = isEditMode, modifier = Modifier.fillMaxWidth().height(150.dp))
 
             Text("사진 추가 (최대 3장)", style = MaterialTheme.typography.labelMedium)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                imageUris.value.forEach { uri ->
-                    Image(painter = rememberAsyncImagePainter(uri), contentDescription = null, modifier = Modifier.size(80.dp).border(1.dp, MaterialTheme.colorScheme.primary))
-                }
-                if (imageUris.value.size < 3 && isEditMode && hasGalleryPermission) {
-                    Button(onClick = { imagePicker.launch("image/*") }, modifier = Modifier.height(80.dp)) {
-                        Text("추가")
-                    }
-                }
-            }
+            ImageSelector(
+                imageUris = imageUris.value,
+                onRemoveImage = { index ->
+                    imageUris.value = imageUris.value.toMutableList().also { it.removeAt(index) }
+                },
+                onAddImageClick = { imagePicker.launch("image/*") },
+                isEnabled = isEditMode,
+                hasGalleryPermission = hasGalleryPermission
+            )
 
             if (!isEditMode) {
                 Button(onClick = { isEditMode = true }, modifier = Modifier.fillMaxWidth()) {
