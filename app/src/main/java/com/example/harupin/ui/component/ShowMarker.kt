@@ -15,7 +15,7 @@ fun ShowMarker(memo: MemoEntity, navController: NavController) {
         state = rememberMarkerState(position = LatLng(memo.latitude, memo.longitude)),
         captionText = memo.locationName ?: memo.title,
         onClick = {
-            navController.navigate("memo_detail/${memo.id}")
+            navController.navigate("memo?id=${memo.id}")
             true
         }
     )
