@@ -1,8 +1,11 @@
 package com.example.harupin.ui.screen
 
-import android.R.attr.data
 import android.app.DatePickerDialog
 import android.icu.util.Calendar
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
 import com.example.harupin.roomDB.MemoDatabase
 import com.example.harupin.roomDB.MemoEntity
 import com.example.harupin.viewmodel.MemoRepository
@@ -59,6 +63,15 @@ fun MemoScreen(
     val viewModel: MemoViewModel = viewModel(factory = viewModelFactory)
 
     var isEditMode by remember { mutableStateOf(edit) }
+
+
+    val imageUris = remember { mutableStateOf<List<Uri>>(emptyList()) }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris: List<Uri> ->
+        imageUris.value = uris.take(3) // 최대 3장까지 선택
+    }
 
     var title by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
@@ -214,6 +227,34 @@ fun MemoScreen(
                 .height(150.dp)
         )
 
+        Text(text = "사진 추가 (최대 3장)", style = MaterialTheme.typography.labelMedium)
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // 선택된 이미지 보여주기
+            imageUris.value.forEach { uri ->
+                Image(
+                    painter = rememberAsyncImagePainter(uri),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .border(1.dp, MaterialTheme.colorScheme.primary)
+                )
+            }
+
+            // 이미지가 3장보다 적을 때만 버튼 보이기
+            if (imageUris.value.size < 3 && isEditMode) {
+                Button(
+                    onClick = { imagePicker.launch("image/*") },
+                    modifier = Modifier.height(80.dp)
+                ) {
+                    Text("추가")
+                }
+            }
+        }
+
 
         if (isEditMode) {
             Button(
@@ -237,7 +278,9 @@ fun MemoScreen(
                         longitude = lng,
                         locationName = location,
                         weather = selectedWeather.ifEmpty { "☀️" },
-                        imageUri = null
+                        imageUri1 = imageUris.value.getOrNull(0)?.toString(),
+                        imageUri2 = imageUris.value.getOrNull(1)?.toString(),
+                        imageUri3 = imageUris.value.getOrNull(2)?.toString()
                     )
                     viewModel.insertMemo(memo)
                     isEditMode = false
@@ -354,6 +397,25 @@ fun MemoScreen(
                     .fillMaxWidth()
                     .height(150.dp)
             )
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                listOf(
+                    memo[0].imageUri1,
+                    memo[0].imageUri2,
+                    memo[0].imageUri3
+                ).filterNotNull().forEach { uriStr ->
+                    Image(
+                        painter = rememberAsyncImagePainter(Uri.parse(uriStr)),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(80.dp)
+                            .border(1.dp, MaterialTheme.colorScheme.primary)
+                    )
+                }
+            }
         }
     } ?: Text("메모 불러오는 중...")
 }
