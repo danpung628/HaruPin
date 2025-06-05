@@ -1,5 +1,6 @@
 package com.example.harupin.ui.screen
 
+import android.R.attr.data
 import android.app.DatePickerDialog
 import android.icu.util.Calendar
 import androidx.compose.foundation.border
@@ -34,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -268,10 +270,91 @@ fun MemoScreen(
     }
 
     memo.firstOrNull()?.let {
-        //메모 보여주는 UI 작성 시작
-        Text(text = memo[0].id.toString() + memo[0].latitude.toString())
 
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
 
+            // 위도/경도 + 닫기 버튼
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "경도: %.4f 위도: %.4f".format(memo[0].latitude, memo[0].longitude),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Button(onClick = { navController.popBackStack() }) {
+                    Text("닫기")
+                }
+            }
+
+            // 날씨 이모지 + 날짜
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("☀️", "🌤️", "🌧️", "⛈️", "❄️", "🌫️").forEach { emoji ->
+                        val isSelected = memo[0].weather == emoji
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .border(
+                                    width = if (isSelected) 1.dp else 0.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                    shape = RoundedCornerShape(50)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = emoji)
+                        }
+                    }
+                }
+                Text("📅 ${memo[0].date}")
+            }
+
+            // 제목 & 장소
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = memo[0].title,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("제목") },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp)
+                )
+                OutlinedTextField(
+                    value = memo[0].locationName ?: "",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("장소") },
+                    modifier = Modifier
+                        .width(100.dp)
+                        .height(56.dp)
+                )
+            }
+
+            // 내용
+            OutlinedTextField(
+                value = memo[0].content,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("내용") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+            )
+        }
 
     } ?: Text("메모 불러오는 중...")
 }
