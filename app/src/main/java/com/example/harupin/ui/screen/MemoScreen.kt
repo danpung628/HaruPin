@@ -54,6 +54,10 @@ import com.example.harupin.roomDB.MemoEntity
 import com.example.harupin.viewmodel.MemoRepository
 import com.example.harupin.viewmodel.MemoViewModel
 import com.example.harupin.viewmodel.MemoViewModelFactory
+import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
+import java.util.UUID
 
 @Composable
 fun WeatherSelector(
@@ -241,10 +245,25 @@ fun MemoScreen(
 
     val imageUris = remember { mutableStateOf<List<Uri>>(emptyList()) }
 
+    fun copyUriToInternalStorage(uri: Uri): Uri? {
+        return try {
+            val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
+            val file = File(context.filesDir, "img_${UUID.randomUUID()}.jpg")
+            val outputStream = FileOutputStream(file)
+            inputStream?.copyTo(outputStream)
+            inputStream?.close()
+            outputStream.close()
+            Uri.fromFile(file)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
-    ) { uris: List<Uri> ->
-        imageUris.value = uris.take(3) // 최대 3장까지 선택
+    ) { uris ->
+        val savedUris = uris.take(3).mapNotNull { copyUriToInternalStorage(it) }
+        imageUris.value = savedUris
     }
 
     var title by remember { mutableStateOf("") }
@@ -433,6 +452,14 @@ fun MemoScreen(
     val memo by viewModel.searchResults.collectAsState()
     var isEditMode by remember { mutableStateOf(edit) }
 
+    // 🔁 초기 상태 백업용 상태값
+    var originalTitle by remember { mutableStateOf("") }
+    var originalContent by remember { mutableStateOf("") }
+    var originalLocation by remember { mutableStateOf("") }
+    var originalWeather by remember { mutableStateOf("") }
+    var originalDate by remember { mutableStateOf("") }
+    var originalImages by remember { mutableStateOf<List<Uri>>(emptyList()) }
+
     var title by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
@@ -441,9 +468,26 @@ fun MemoScreen(
     val imageUris = remember { mutableStateOf<List<Uri>>(emptyList()) }
     val calendar = remember { Calendar.getInstance() }
 
+    fun copyUriToInternalStorage(uri: Uri): Uri? {
+        return try {
+            val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
+            val file = File(context.filesDir, "img_${UUID.randomUUID()}.jpg")
+            val outputStream = FileOutputStream(file)
+            inputStream?.copyTo(outputStream)
+            inputStream?.close()
+            outputStream.close()
+            Uri.fromFile(file)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
-    ) { uris -> imageUris.value = uris.take(3) }
+    ) { uris ->
+        val savedUris = uris.take(3).mapNotNull { copyUriToInternalStorage(it) }
+        imageUris.value = savedUris
+    }
 
     val datePickerDialog = DatePickerDialog(
         context,
@@ -465,6 +509,14 @@ fun MemoScreen(
             selectedWeather = it.weather
             selectedDate = it.date
             imageUris.value = listOfNotNull(it.imageUri1, it.imageUri2, it.imageUri3).map { uri -> Uri.parse(uri) }
+
+            // 백업 저장
+            originalTitle = it.title
+            originalContent = it.content
+            originalLocation = it.locationName ?: ""
+            originalWeather = it.weather
+            originalDate = it.date
+            originalImages = listOfNotNull(it.imageUri1, it.imageUri2, it.imageUri3).map { uri -> Uri.parse(uri) }
         }
     }
 
@@ -480,7 +532,16 @@ fun MemoScreen(
             ) {
                 Text("경도: %.1f 위도: %.1f".format(currentMemo.latitude, currentMemo.longitude))
                 Button(onClick = {
-                    if (isEditMode) isEditMode = false else navController.popBackStack()
+                    if (isEditMode){
+                        // 🔁 복구
+                        title = originalTitle
+                        content = originalContent
+                        location = originalLocation
+                        selectedWeather = originalWeather
+                        selectedDate = originalDate
+                        imageUris.value = originalImages
+                        isEditMode = false
+                    } else navController.popBackStack()
                 }) { Text(if (isEditMode) "취소" else "닫기") }
             }
 
