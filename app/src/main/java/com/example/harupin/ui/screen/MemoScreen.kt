@@ -338,121 +338,150 @@ fun MemoScreen(
     edit: Boolean
 ) {
     val context = LocalContext.current
+    var hasGalleryPermission by remember { mutableStateOf(true) }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasGalleryPermission = isGranted
+        if (!isGranted) {
+            Toast.makeText(context, "사진을 추가하려면 갤러리 접근 권한이 필요합니다.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            android.Manifest.permission.READ_MEDIA_IMAGES
+        } else {
+            android.Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        val granted = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+        hasGalleryPermission = granted
+        if (!granted) permissionLauncher.launch(permission)
+    }
+
     val db = MemoDatabase.getDatabase(context)
     val viewModelFactory = MemoViewModelFactory(MemoRepository(db))
     val viewModel: MemoViewModel = viewModel(factory = viewModelFactory)
-
     val memo by viewModel.searchResults.collectAsState()
+    var isEditMode by remember { mutableStateOf(edit) }
 
-    LaunchedEffect(id) {
-        viewModel.getById(id)
+    var title by remember { mutableStateOf("") }
+    var content by remember { mutableStateOf("") }
+    var location by remember { mutableStateOf("") }
+    var selectedWeather by remember { mutableStateOf("") }
+    var selectedDate by remember { mutableStateOf("") }
+    val imageUris = remember { mutableStateOf<List<Uri>>(emptyList()) }
+    val calendar = remember { Calendar.getInstance() }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris -> imageUris.value = uris.take(3) }
+
+    val datePickerDialog = DatePickerDialog(
+        context,
+        { _, year, month, day ->
+            selectedDate = "%04d-%02d-%02d".format(year, month + 1, day)
+            calendar.set(year, month, day)
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    )
+
+    LaunchedEffect(id) { viewModel.getById(id) }
+    LaunchedEffect(memo) {
+        memo.firstOrNull()?.let {
+            title = it.title
+            content = it.content
+            location = it.locationName ?: ""
+            selectedWeather = it.weather
+            selectedDate = it.date
+            imageUris.value = listOfNotNull(it.imageUri1, it.imageUri2, it.imageUri3).map { uri -> Uri.parse(uri) }
+        }
     }
 
-    memo.firstOrNull()?.let {
-
+    memo.firstOrNull()?.let { currentMemo ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
-            // 위도/경도 + 닫기 버튼
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "경도: %.4f 위도: %.4f".format(memo[0].latitude, memo[0].longitude),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Button(onClick = { navController.popBackStack() }) {
-                    Text("닫기")
-                }
+                Text("경도: %.1f 위도: %.1f".format(currentMemo.latitude, currentMemo.longitude))
+                Button(onClick = {
+                    if (isEditMode) isEditMode = false else navController.popBackStack()
+                }) { Text(if (isEditMode) "취소" else "닫기") }
             }
 
-            // 날씨 이모지 + 날짜
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("☀️", "🌤️", "🌧️", "⛈️", "❄️", "🌫️").forEach { emoji ->
-                        val isSelected = memo[0].weather == emoji
-                        Box(
-                            modifier = Modifier
-                                .size(30.dp)
-                                .border(
-                                    width = if (isSelected) 1.dp else 0.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                    shape = RoundedCornerShape(50)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(text = emoji)
-                        }
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                val options = listOf("☀️", "🌤️", "🌧️", "⛈️", "❄️", "🌫️")
+                options.forEach { emoji ->
+                    val selected = selectedWeather == emoji
+                    Box(
+                        modifier = Modifier.size(30.dp)
+                            .then(if (selected) Modifier.border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(50)) else Modifier)
+                            .clickable(isEditMode) { selectedWeather = emoji },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(emoji)
                     }
                 }
-                Text("📅 ${memo[0].date}")
+                OutlinedButton(
+                    onClick = { datePickerDialog.show() },
+                    enabled = isEditMode,
+                    modifier = Modifier.height(48.dp).width(140.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Icon(Icons.Default.DateRange, contentDescription = null)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = selectedDate)
+                }
             }
 
-            // 제목 & 장소
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedTextField(
-                    value = memo[0].title,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("제목") },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(56.dp)
-                )
-                OutlinedTextField(
-                    value = memo[0].locationName ?: "",
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("장소") },
-                    modifier = Modifier
-                        .width(100.dp)
-                        .height(56.dp)
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("제목") }, enabled = isEditMode, modifier = Modifier.weight(1f))
+                OutlinedTextField(value = location, onValueChange = { location = it }, label = { Text("장소") }, enabled = isEditMode, modifier = Modifier.width(100.dp))
             }
 
-            // 내용
-            OutlinedTextField(
-                value = memo[0].content,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("내용") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp)
-            )
+            OutlinedTextField(value = content, onValueChange = { content = it }, label = { Text("내용") }, enabled = isEditMode, modifier = Modifier.fillMaxWidth().height(150.dp))
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                listOf(
-                    memo[0].imageUri1,
-                    memo[0].imageUri2,
-                    memo[0].imageUri3
-                ).filterNotNull().forEach { uriStr ->
-                    Image(
-                        painter = rememberAsyncImagePainter(Uri.parse(uriStr)),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(80.dp)
-                            .border(1.dp, MaterialTheme.colorScheme.primary)
+            Text("사진 추가 (최대 3장)", style = MaterialTheme.typography.labelMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                imageUris.value.forEach { uri ->
+                    Image(painter = rememberAsyncImagePainter(uri), contentDescription = null, modifier = Modifier.size(80.dp).border(1.dp, MaterialTheme.colorScheme.primary))
+                }
+                if (imageUris.value.size < 3 && isEditMode && hasGalleryPermission) {
+                    Button(onClick = { imagePicker.launch("image/*") }, modifier = Modifier.height(80.dp)) {
+                        Text("추가")
+                    }
+                }
+            }
+
+            if (!isEditMode) {
+                Button(onClick = { isEditMode = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("편집하기")
+                }
+            } else {
+                Button(onClick = {
+                    val updated = currentMemo.copy(
+                        title = title,
+                        content = content,
+                        locationName = location,
+                        weather = selectedWeather,
+                        date = selectedDate,
+                        imageUri1 = imageUris.value.getOrNull(0)?.toString(),
+                        imageUri2 = imageUris.value.getOrNull(1)?.toString(),
+                        imageUri3 = imageUris.value.getOrNull(2)?.toString()
                     )
+                    viewModel.updateMemo(updated)
+                    isEditMode = false
+                }, modifier = Modifier.fillMaxWidth()) {
+                    Text("저장")
                 }
             }
         }
     } ?: Text("메모 불러오는 중...")
 }
-
