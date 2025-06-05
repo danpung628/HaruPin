@@ -22,6 +22,10 @@ data class MemoEntity(
 
     val weather: String,            // 날씨 정보 (예: 맑음, 흐림)
 
-    val imageUri: String?,          // 이미지 URI (로컬 저장소 경로 또는 Content URI)
+    // 이미지는 최대 3장 추가
+    val imageUri1: String? = null,
+    val imageUri2: String? = null,
+    val imageUri3: String? = null,
+
     val isFavorite: Boolean? = false // 즐겨찾기 여부
 )

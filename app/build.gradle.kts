@@ -67,6 +67,8 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("com.naver.maps:map-sdk:3.21.0")
     implementation(libs.naver.map.compose)
+    // ✅ 이미지 로딩용 Coil for Jetpack Compose
+    implementation("io.coil-kt:coil-compose:2.2.2")
 }
 
 secrets {
