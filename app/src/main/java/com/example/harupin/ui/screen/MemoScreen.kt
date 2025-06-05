@@ -467,6 +467,8 @@ fun MemoScreen(
     var selectedDate by remember { mutableStateOf("") }
     val imageUris = remember { mutableStateOf<List<Uri>>(emptyList()) }
     val calendar = remember { Calendar.getInstance() }
+    val deletedImageUris = remember { mutableStateOf<List<Uri>>(emptyList()) } // 삭제된 이미지들 추적
+
 
     fun copyUriToInternalStorage(uri: Uri): Uri? {
         return try {
@@ -541,6 +543,7 @@ fun MemoScreen(
                         selectedDate = originalDate
                         imageUris.value = originalImages
                         isEditMode = false
+                        deletedImageUris.value = emptyList() // 복구 시 삭제 예약도 취소
                     } else navController.popBackStack()
                 }) { Text(if (isEditMode) "취소" else "닫기") }
             }
@@ -580,6 +583,8 @@ fun MemoScreen(
             ImageSelector(
                 imageUris = imageUris.value,
                 onRemoveImage = { index ->
+                    val removed = imageUris.value[index]
+                    deletedImageUris.value = deletedImageUris.value + removed
                     imageUris.value = imageUris.value.toMutableList().also { it.removeAt(index) }
                 },
                 onAddImageClick = { imagePicker.launch("image/*") },
@@ -604,6 +609,12 @@ fun MemoScreen(
                         imageUri3 = imageUris.value.getOrNull(2)?.toString()
                     )
                     viewModel.updateMemo(updated)
+
+                    // 삭제 예약된 이미지 파일 삭제
+                    deletedImageUris.value.forEach { uri ->
+                        uri.path?.let { File(it).delete() }
+                    }
+                    deletedImageUris.value = emptyList()
                     isEditMode = false
                 }, modifier = Modifier.fillMaxWidth()) {
                     Text("저장")
