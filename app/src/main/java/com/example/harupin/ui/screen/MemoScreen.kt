@@ -84,6 +84,36 @@ fun WeatherSelector(
     }
 }
 
+@Composable
+fun DateSelector(
+    selectedDate: String,
+    onClick: () -> Unit,
+    isEnabled: Boolean
+) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = isEnabled,
+        modifier = Modifier
+            .height(48.dp)
+            .width(140.dp),
+        contentPadding = PaddingValues(0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.DateRange,
+                contentDescription = "날짜 선택"
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(text = selectedDate)
+        }
+    }
+}
 
 @Composable
 fun MemoScreen(
@@ -205,29 +235,11 @@ fun MemoScreen(
             )
 
             // 날짜 선택 버튼 (달력 아이콘 포함)
-            OutlinedButton(
+            DateSelector(
+                selectedDate = selectedDate,
                 onClick = { datePickerDialog.show() },
-                enabled = isEditMode,
-                modifier = Modifier
-                    .height(48.dp)
-                    .width(140.dp),
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp), // 최소 수평 여백만 남김
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.DateRange,
-                        contentDescription = "날짜 선택"
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = selectedDate)
-                }
-            }
+                isEnabled = isEditMode
+            )
 
         }
         Row(
@@ -431,11 +443,26 @@ fun MemoScreen(
                 }) { Text(if (isEditMode) "취소" else "닫기") }
             }
 
-            WeatherSelector(
-                selectedWeather = selectedWeather,
-                onWeatherSelected = { selectedWeather = it },
-                isEnabled = isEditMode
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 🌤️ 날씨 이모지 선택기
+                WeatherSelector(
+                    selectedWeather = selectedWeather,
+                    onWeatherSelected = { selectedWeather = it },
+                    isEnabled = isEditMode
+                )
+
+                // 날짜 선택 버튼 (달력 아이콘 포함)
+                DateSelector(
+                    selectedDate = selectedDate,
+                    onClick = { datePickerDialog.show() },
+                    isEnabled = isEditMode
+                )
+
+            }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("제목") }, enabled = isEditMode, modifier = Modifier.weight(1f))
