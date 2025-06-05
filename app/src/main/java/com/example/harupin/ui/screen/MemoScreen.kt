@@ -116,6 +116,41 @@ fun DateSelector(
 }
 
 @Composable
+fun TitleLocationFields(
+    title: String,
+    onTitleChange: (String) -> Unit,
+    location: String,
+    onLocationChange: (String) -> Unit,
+    isEnabled: Boolean
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedTextField(
+            value = title,
+            onValueChange = onTitleChange,
+            label = { Text("제목") },
+            enabled = isEnabled,
+            modifier = Modifier
+                .height(56.dp)
+                .weight(1f)
+        )
+
+        OutlinedTextField(
+            value = location,
+            onValueChange = onLocationChange,
+            label = { Text("장소") },
+            enabled = isEnabled,
+            modifier = Modifier
+                .height(56.dp)
+                .width(100.dp)
+        )
+    }
+}
+
+@Composable
 fun MemoScreen(
     navController: NavController,
     lat: Double,
@@ -242,33 +277,13 @@ fun MemoScreen(
             )
 
         }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // 제목 입력란 - 넓게 확장
-            OutlinedTextField(
-                value = title,
-                enabled = isEditMode,
-                onValueChange = { title = it },
-                label = { Text("제목") },
-                modifier = Modifier
-                    .height(56.dp)
-                    .weight(1f)
-            )
-
-            // 장소 입력란 - 고정 너비
-            OutlinedTextField(
-                value = location,
-                enabled = isEditMode,
-                onValueChange = { location = it },
-                label = { Text("장소") },
-                modifier = Modifier
-                    .height(56.dp)
-                    .width(100.dp)
-            )
-        }
+        TitleLocationFields(
+            title = title,
+            onTitleChange = { title = it },
+            location = location,
+            onLocationChange = { location = it },
+            isEnabled = isEditMode
+        )
 
 
 
@@ -464,10 +479,13 @@ fun MemoScreen(
 
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("제목") }, enabled = isEditMode, modifier = Modifier.weight(1f))
-                OutlinedTextField(value = location, onValueChange = { location = it }, label = { Text("장소") }, enabled = isEditMode, modifier = Modifier.width(100.dp))
-            }
+            TitleLocationFields(
+                title = title,
+                onTitleChange = { title = it },
+                location = location,
+                onLocationChange = { location = it },
+                isEnabled = isEditMode
+            )
 
             OutlinedTextField(value = content, onValueChange = { content = it }, label = { Text("내용") }, enabled = isEditMode, modifier = Modifier.fillMaxWidth().height(150.dp))
 
