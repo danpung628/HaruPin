@@ -55,6 +55,37 @@ import com.example.harupin.viewmodel.MemoViewModel
 import com.example.harupin.viewmodel.MemoViewModelFactory
 
 @Composable
+fun WeatherSelector(
+    selectedWeather: String,
+    onWeatherSelected: (String) -> Unit,
+    isEnabled: Boolean
+) {
+    val weatherOptions = listOf("☀️", "🌤️", "🌧️", "⛈️", "❄️", "🌫️")
+
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        weatherOptions.forEach { emoji ->
+            val isSelected = selectedWeather == emoji
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .then(
+                        if (isSelected) Modifier.border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = RoundedCornerShape(50)
+                        ) else Modifier
+                    )
+                    .clickable(enabled = isEnabled) { onWeatherSelected(emoji) },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = emoji, style = MaterialTheme.typography.titleMedium)
+            }
+        }
+    }
+}
+
+
+@Composable
 fun MemoScreen(
     navController: NavController,
     lat: Double,
@@ -167,27 +198,11 @@ fun MemoScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // 🌤️ 날씨 이모지 선택기
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                val weatherOptions = listOf("☀️", "🌤️", "🌧️", "⛈️", "❄️", "🌫️")
-                weatherOptions.forEach { emoji ->
-                    val isSelected = selectedWeather == emoji
-                    Box(
-                        modifier = Modifier
-                            .size(30.dp)
-                            .then(
-                                if (isSelected) Modifier.border(
-                                    width = 1.dp,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    shape = RoundedCornerShape(50)
-                                ) else Modifier
-                            )
-                            .clickable(enabled = isEditMode) { selectedWeather = emoji },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(text = emoji, style = MaterialTheme.typography.titleMedium)
-                    }
-                }
-            }
+            WeatherSelector(
+                selectedWeather = selectedWeather,
+                onWeatherSelected = { selectedWeather = it },
+                isEnabled = isEditMode
+            )
 
             // 날짜 선택 버튼 (달력 아이콘 포함)
             OutlinedButton(
@@ -416,30 +431,11 @@ fun MemoScreen(
                 }) { Text(if (isEditMode) "취소" else "닫기") }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                val options = listOf("☀️", "🌤️", "🌧️", "⛈️", "❄️", "🌫️")
-                options.forEach { emoji ->
-                    val selected = selectedWeather == emoji
-                    Box(
-                        modifier = Modifier.size(30.dp)
-                            .then(if (selected) Modifier.border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(50)) else Modifier)
-                            .clickable(isEditMode) { selectedWeather = emoji },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(emoji)
-                    }
-                }
-                OutlinedButton(
-                    onClick = { datePickerDialog.show() },
-                    enabled = isEditMode,
-                    modifier = Modifier.height(48.dp).width(140.dp),
-                    contentPadding = PaddingValues(0.dp)
-                ) {
-                    Icon(Icons.Default.DateRange, contentDescription = null)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = selectedDate)
-                }
-            }
+            WeatherSelector(
+                selectedWeather = selectedWeather,
+                onWeatherSelected = { selectedWeather = it },
+                isEnabled = isEditMode
+            )
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("제목") }, enabled = isEditMode, modifier = Modifier.weight(1f))
@@ -485,3 +481,5 @@ fun MemoScreen(
         }
     } ?: Text("메모 불러오는 중...")
 }
+
+
