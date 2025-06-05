@@ -33,4 +33,8 @@ class MemoRepository(private val db: MemoDatabase) {
     suspend fun updateMemoFavorite(memoId: Int, isFavorite: Boolean) {
         dao.updateMemoFavorite(memoId, isFavorite)
     }
+
+    fun getById(id: Int) = dao.getById(id)
+
+
 }

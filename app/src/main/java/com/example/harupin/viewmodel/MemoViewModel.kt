@@ -108,4 +108,13 @@ class MemoViewModel(private val repository: MemoRepository) : ViewModel() {
             }
         }
     }
+
+    fun getById(id: Int){
+        viewModelScope.launch {
+            repository.getById(id).collect { memoList ->
+                _searchResults.value = memoList
+            }
+        }
+    }
+
 }

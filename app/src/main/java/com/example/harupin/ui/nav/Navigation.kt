@@ -38,7 +38,7 @@ fun NavigationGraph(navController: NavHostController) {
             )
         ) { backStackEntry ->
             val id = backStackEntry.arguments?.getString("id")?.toInt() ?: 0
-            MemoScreen(navController,12.015,123.02, false)
+            MemoScreen(navController,id, false)
         }
     }
 }

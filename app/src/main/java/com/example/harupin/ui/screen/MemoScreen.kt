@@ -26,6 +26,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -246,5 +248,31 @@ fun MemoScreen(
             }
         }
     }
+}
+
+@Composable
+fun MemoScreen(
+    navController: NavController,
+    id: Int,
+    edit: Boolean
+) {
+    val context = LocalContext.current
+    val db = MemoDatabase.getDatabase(context)
+    val viewModelFactory = MemoViewModelFactory(MemoRepository(db))
+    val viewModel: MemoViewModel = viewModel(factory = viewModelFactory)
+
+    val memo by viewModel.searchResults.collectAsState()
+
+    LaunchedEffect(id) {
+        viewModel.getById(id)
+    }
+
+    memo.firstOrNull()?.let {
+        //메모 보여주는 UI 작성 시작
+        Text(text = memo[0].id.toString() + memo[0].latitude.toString())
+
+
+
+    } ?: Text("메모 불러오는 중...")
 }
 
