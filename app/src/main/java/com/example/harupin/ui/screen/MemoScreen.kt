@@ -1,8 +1,11 @@
 package com.example.harupin.ui.screen
 
 import android.app.DatePickerDialog
+import android.content.pm.PackageManager
 import android.icu.util.Calendar
 import android.net.Uri
+import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -41,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
@@ -58,6 +62,31 @@ fun MemoScreen(
     edit: Boolean
 ) {
     val context = LocalContext.current
+    var hasGalleryPermission by remember { mutableStateOf(true) } // 기본 true → false되면 버튼 막힘
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        hasGalleryPermission = isGranted
+        if (!isGranted) {
+            Toast.makeText(context, "사진을 추가하려면 갤러리 접근 권한이 필요합니다.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            android.Manifest.permission.READ_MEDIA_IMAGES
+        } else {
+            android.Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+
+        val granted = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+        hasGalleryPermission = granted
+
+        if (!granted) {
+            permissionLauncher.launch(permission)
+        }
+    }
+
     val db = MemoDatabase.getDatabase(context)
     val viewModelFactory = MemoViewModelFactory(MemoRepository(db))
     val viewModel: MemoViewModel = viewModel(factory = viewModelFactory)
@@ -245,13 +274,20 @@ fun MemoScreen(
             }
 
             // 이미지가 3장보다 적을 때만 버튼 보이기
-            if (imageUris.value.size < 3 && isEditMode) {
+            if (imageUris.value.size < 3 && isEditMode && hasGalleryPermission) {
                 Button(
                     onClick = { imagePicker.launch("image/*") },
                     modifier = Modifier.height(80.dp)
                 ) {
                     Text("추가")
                 }
+            } else if (!hasGalleryPermission && isEditMode) {
+                Text(
+                    text = "사진 추가 권한이 없습니다",
+                    color = Color.Red,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.align(Alignment.CenterVertically)
+                )
             }
         }
 
