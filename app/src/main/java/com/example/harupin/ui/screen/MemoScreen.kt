@@ -355,7 +355,6 @@ fun MemoScreen(
                     .height(150.dp)
             )
         }
-
     } ?: Text("메모 불러오는 중...")
 }
 
