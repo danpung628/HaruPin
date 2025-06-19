@@ -188,7 +188,7 @@ fun ImageSelector(
         }
 
         if (imageUris.size < 3 && isEnabled && hasGalleryPermission) {
-            Button(onClick = onAddImageClick, modifier = Modifier.height(80.dp)) {
+            Button(onClick = onAddImageClick) {
                 Text("추가")
             }
         } else if (!hasGalleryPermission && isEnabled) {
@@ -310,7 +310,7 @@ fun MemoScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 📍 위도/경도 표시
+            // 위도/경도 표시
             Text(
                 text = String.format("경도: %.1f 위도: %.1f", lat, lng),
                 style = MaterialTheme.typography.bodyMedium
@@ -327,7 +327,7 @@ fun MemoScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 🌤️ 날씨 이모지 선택기
+            //  날씨 이모지 선택기
             WeatherSelector(
                 selectedWeather = selectedWeather,
                 onWeatherSelected = { selectedWeather = it },
@@ -360,7 +360,7 @@ fun MemoScreen(
             label = { Text("내용") },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(150.dp)
+                .height(200.dp)
         )
 
         Text(text = "사진 추가 (최대 3장)", style = MaterialTheme.typography.labelMedium)
@@ -594,7 +594,7 @@ fun MemoScreen(
                 enabled = isEditMode,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp)
+                    .height(200.dp)
             )
 
             Text("사진 추가 (최대 3장)", style = MaterialTheme.typography.labelMedium)
