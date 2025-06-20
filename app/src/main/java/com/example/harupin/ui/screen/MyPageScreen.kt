@@ -1,6 +1,7 @@
 package com.example.harupin.ui.screen
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -47,7 +48,8 @@ fun MyPageScreen(navController: NavController) {
     var showOnlyFavorites by remember { mutableStateOf(false) }
 
     // 현재 표시할 메모 목록 결정
-    val baseMemos = if (filteredMemos.isEmpty() && allMemos.isNotEmpty()) allMemos else filteredMemos
+    val baseMemos =
+        if (filteredMemos.isEmpty() && allMemos.isNotEmpty()) allMemos else filteredMemos
     val displayMemos = if (showOnlyFavorites) {
         baseMemos.filter { it.isFavorite == true } // 즐겨찾기 필터링
     } else {
@@ -160,7 +162,10 @@ fun MyPageScreen(navController: NavController) {
                     list = displayMemos,
                     navController = navController,
                     onFavoriteToggle = { memo ->
-                        viewModel.updateMemoFavorite(memo.id, !(memo.isFavorite ?: false)) // 즐겨찾기 상태 토글
+                        viewModel.updateMemoFavorite(
+                            memo.id,
+                            !(memo.isFavorite ?: false)
+                        ) // 즐겨찾기 상태 토글
                     }
                 )
             }
@@ -264,6 +269,26 @@ fun Page(
     onClicked: () -> Unit,
     onFavoriteToggle: (MemoEntity) -> Unit // 즐겨찾기 토글 콜백 추가
 ) {
+    val context = LocalContext.current
+    val db = MemoDatabase.getDatabase(context)
+    val viewModelFactory = MemoViewModelFactory(MemoRepository(db))
+    val viewModel: MemoViewModel = viewModel(factory = viewModelFactory)
+
+
+    var showDialog by remember { mutableStateOf(false) }
+
+    if (showDialog) {
+        DeleteConfirmDialog(
+            onConfirm = {
+                viewModel.deleteMemo(memo)
+                showDialog = false
+            },
+            onDismiss = {
+                showDialog = false
+            }
+        )
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -273,7 +298,10 @@ fun Page(
         Column(
             modifier = Modifier
                 .weight(1f)
-                .clickable { onClicked() }
+                .combinedClickable(
+                    onLongClick = { showDialog = true },
+                    onClick = onClicked,
+                )
         ) {
             Text(text = memo.title, fontSize = 18.sp)
             Text(text = "날짜: ${memo.date} ${memo.time}", fontSize = 14.sp)
@@ -293,3 +321,27 @@ fun Page(
     }
     Spacer(modifier = Modifier.height(8.dp))
 }
+
+
+@Composable
+fun DeleteConfirmDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("삭제 확인") },
+        text = { Text("정말로 삭제하시겠습니까?") },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("네")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("아니요")
+            }
+        }
+    )
+}
+
