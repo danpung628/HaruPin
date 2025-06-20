@@ -1,42 +1,70 @@
 package com.example.harupin.ui.screen
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.harupin.roomDB.MemoDatabase
 import com.example.harupin.roomDB.MemoEntity
+import com.example.harupin.viewmodel.MemoRepository
 import com.example.harupin.viewmodel.MemoViewModel
 import com.example.harupin.viewmodel.MemoViewModelFactory
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.ImeAction
-import com.example.harupin.roomDB.MemoDatabase
-import com.example.harupin.viewmodel.MemoRepository
+
 
 @Composable
 fun SearchScreen(navController: NavController) {
     val context = LocalContext.current
     val viewModel: MemoViewModel = viewModel(factory = MemoViewModelFactory(MemoRepository(MemoDatabase.getDatabase(context))))
     var query by remember { mutableStateOf("") }
+    val searchResults by viewModel.searchResults.collectAsState()
     var isLoading by remember { mutableStateOf(false) }
-    val memos by if (query.isEmpty()) {
-        viewModel.allMemos
-    } else {
-        viewModel.searchResults
-    }.collectAsState(initial = emptyList())
+
+    LaunchedEffect(query) {
+        isLoading = true
+        if (query.isBlank()) {
+            viewModel.getAllMemos()
+        } else {
+            viewModel.searchMemos(query)
+        }
+    }
+
+    LaunchedEffect(searchResults) {
+        isLoading = false
+    }
 
     Column(
         modifier = Modifier
@@ -45,105 +73,81 @@ fun SearchScreen(navController: NavController) {
     ) {
         OutlinedTextField(
             value = query,
-            onValueChange = { newQuery ->
-                query = newQuery // 검색어 상태 업데이트
-                if (newQuery.isEmpty()) {
-                    // 검색어 지우면 전체 메모로 돌아감
-                } else {
-                    isLoading = true
-                    viewModel.searchMemos(newQuery) // 검색 실행
-                    isLoading = false // 실제로는 비동기 처리 후 변경 필요
-                }
-            },
-            label = { Text("검색") },
-            leadingIcon = {
-                Icon(
-                    Icons.Default.Search,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            },
+            onValueChange = { query = it },
+            label = { Text("메모 검색") },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
             trailingIcon = {
-                Row {
-                    if (query.isNotEmpty()) {
-                        IconButton(onClick = {
-                            query = "" // 검색어 지우기
-                            // 검색어 지우면 전체 메모로 돌아감
-                        }) {
-                            Icon(
-                                Icons.Default.Clear,
-                                contentDescription = "검색어 지우기",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                    IconButton(onClick = {
-                        isLoading = true
-                        viewModel.searchMemos(query) // 검색 실행
-                        isLoading = false // 실제로는 비동기 처리 후 변경 필요
-                    }) {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = "검색",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = { query = "" }) {
+                        Icon(Icons.Default.Clear, contentDescription = "검색어 지우기")
                     }
                 }
             },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(
-                onSearch = {
-                    isLoading = true
-                    viewModel.searchMemos(query) // 키보드 검색 버튼으로 검색 실행
-                    isLoading = false
-                }
-            ),
+            keyboardActions = KeyboardActions(onSearch = { viewModel.searchMemos(query) }),
+            singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(16.dp)
-            )
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         } else {
-            MemoList(list = memos,navController)
+            MemoList(
+                list = searchResults,
+                navController = navController,
+                onFavoriteToggle = { memo ->
+                    viewModel.updateMemoFavorite(memo.id, !(memo.isFavorite ?: false))
+                },
+                onDeleteRequest = { memo ->
+                    viewModel.deleteMemo(memo)
+                }
+            )
         }
     }
 }
 
 @Composable
-fun MemoList(list: List<MemoEntity>,navController: NavController) {
+fun MemoList(
+    list: List<MemoEntity>,
+    navController: NavController,
+    onFavoriteToggle: (MemoEntity) -> Unit,
+    onDeleteRequest: (MemoEntity) -> Unit
+) {
     if (list.isEmpty()) {
-        Text(
-            text = "검색 결과가 없습니다",
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            textAlign = TextAlign.Center,
-            fontSize = 16.sp,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "검색 결과가 없습니다",
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     } else {
-        LazyColumn {
-            items(list) { memo ->
-                Column(
+        LazyColumn() {
+            items(list, key = { it.id }) { memo ->
+                Page(
+                    memo = memo,
+                    onClicked = { navController.navigate("memo?id=${memo.id}") },
+                    onFavoriteToggle = onFavoriteToggle,
+                    onDeleteRequest = onDeleteRequest,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(10.dp)
-                        .clickable{ // 누르면 메모 보기로 감
-                            navController.navigate("memo?id=${memo.id}")
-                        }
-                ) {
-                    Text(text = memo.title, fontSize = 18.sp)
-                    Text(text = "날짜: ${memo.date} ${memo.time}", fontSize = 14.sp)
-                    Text(text = "위치: ${memo.locationName ?: "N/A"}", fontSize = 14.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
+                )
             }
         }
     }
 }
+
