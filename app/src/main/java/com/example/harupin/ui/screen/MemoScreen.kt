@@ -27,11 +27,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -95,27 +99,49 @@ fun DateSelector(
     onClick: () -> Unit,
     isEnabled: Boolean
 ) {
-    OutlinedButton(
-        onClick = onClick,
-        enabled = isEnabled,
-        modifier = Modifier
-            .height(48.dp)
-            .width(140.dp),
-        contentPadding = PaddingValues(0.dp)
-    ) {
+    if (isEnabled) {
+        OutlinedButton(
+            onClick = onClick,
+            enabled = true,
+            modifier = Modifier
+                .height(48.dp)
+                .width(140.dp),
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DateRange,
+                    contentDescription = "날짜 선택"
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = selectedDate)
+            }
+        }
+    } else {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp),
+                .height(48.dp)
+                .width(140.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
             Icon(
                 imageVector = Icons.Default.DateRange,
-                contentDescription = "날짜 선택"
+                contentDescription = "날짜",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = selectedDate)
+            Text(
+                text = selectedDate,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
@@ -135,9 +161,10 @@ fun TitleLocationFields(
     ) {
         OutlinedTextField(
             value = title,
-            onValueChange = onTitleChange,
+            onValueChange = { if (isEnabled) onTitleChange(it) },
             label = { Text("제목") },
-            enabled = isEnabled,
+            enabled = true,
+            readOnly = !isEnabled,
             modifier = Modifier
                 .height(56.dp)
                 .weight(1f)
@@ -145,9 +172,10 @@ fun TitleLocationFields(
 
         OutlinedTextField(
             value = location,
-            onValueChange = onLocationChange,
+            onValueChange = { if (isEnabled) onLocationChange(it) },
             label = { Text("장소") },
-            enabled = isEnabled,
+            enabled = true,
+            readOnly = !isEnabled,
             modifier = Modifier
                 .height(56.dp)
                 .width(100.dp)
@@ -161,34 +189,43 @@ fun ImageSelector(
     onRemoveImage: (Int) -> Unit,
     onAddImageClick: () -> Unit,
     isEnabled: Boolean,
-    hasGalleryPermission: Boolean
+    hasGalleryPermission: Boolean,
+    onImageClick: (Uri) -> Unit
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
         imageUris.forEachIndexed { index, uri ->
-            Box(modifier = Modifier.size(80.dp)) {
-                Image(
-                    painter = rememberAsyncImagePainter(uri),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .border(1.dp, MaterialTheme.colorScheme.primary)
-                )
-                if (isEnabled) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "삭제",
-                        tint = Color.Red,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .size(20.dp)
-                            .clickable { onRemoveImage(index) }
+            Card(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clickable(enabled = !isEnabled) { onImageClick(uri) }, // 클릭은 Card에서만 처리
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                // Card 내부의 Box는 Card를 꽉 채우도록 fillMaxSize()를 사용하는 것이 더 좋습니다.
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Image(
+                        painter = rememberAsyncImagePainter(uri),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize() // border와 clickable을 모두 삭제!
                     )
+                    if (isEnabled) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "삭제",
+                            // 아이콘 색상도 테마에 맞게 잘 바꾸셨네요! 좋습니다.
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .size(20.dp)
+                                .clickable { onRemoveImage(index) }
+                        )
+                    }
                 }
             }
         }
 
         if (imageUris.size < 3 && isEnabled && hasGalleryPermission) {
-            Button(onClick = onAddImageClick, modifier = Modifier.height(80.dp)) {
+            Button(onClick = onAddImageClick) {
                 Text("추가")
             }
         } else if (!hasGalleryPermission && isEnabled) {
@@ -202,6 +239,29 @@ fun ImageSelector(
     }
 }
 
+@Composable
+fun ZoomableImageDialog(
+    uri: Uri?,
+    onDismiss: () -> Unit
+) {
+    if (uri != null) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            text = {
+                Image(
+                    painter = rememberAsyncImagePainter(uri),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(onClick = onDismiss) {
+                    Text("닫기")
+                }
+            }
+        )
+    }
+}
 
 @Composable
 fun MemoScreen(
@@ -265,14 +325,18 @@ fun MemoScreen(
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris ->
-        val savedUris = uris.take(3).mapNotNull { copyUriToInternalStorage(it) }
-        imageUris.value = savedUris
+        val currentSize = imageUris.value.size
+        val remainingSlots = 3 - currentSize
+        if (remainingSlots > 0) {
+            val newSavedUris = uris.take(remainingSlots).mapNotNull { copyUriToInternalStorage(it) }
+            imageUris.value = imageUris.value + newSavedUris
+        }
     }
 
     var title by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
-    var selectedWeather by remember { mutableStateOf("") }
+    var selectedWeather by remember { mutableStateOf("☀️") }
     val calendar = remember { Calendar.getInstance() }
 
     var selectedDate by remember {
@@ -310,7 +374,7 @@ fun MemoScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 📍 위도/경도 표시
+            // 위도/경도 표시
             Text(
                 text = String.format("경도: %.1f 위도: %.1f", lat, lng),
                 style = MaterialTheme.typography.bodyMedium
@@ -327,7 +391,7 @@ fun MemoScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 🌤️ 날씨 이모지 선택기
+            //  날씨 이모지 선택기
             WeatherSelector(
                 selectedWeather = selectedWeather,
                 onWeatherSelected = { selectedWeather = it },
@@ -360,7 +424,7 @@ fun MemoScreen(
             label = { Text("내용") },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(150.dp)
+                .height(200.dp)
         )
 
         Text(text = "사진 추가 (최대 3장)", style = MaterialTheme.typography.labelMedium)
@@ -372,7 +436,8 @@ fun MemoScreen(
             },
             onAddImageClick = { imagePicker.launch("image/*") },
             isEnabled = isEditMode,
-            hasGalleryPermission = hasGalleryPermission
+            hasGalleryPermission = hasGalleryPermission,
+            onImageClick = {} // 새 메모에서는 이미지 클릭 이벤트가 필요 없음
         )
 
 
@@ -407,6 +472,7 @@ fun MemoScreen(
                     navController.navigate("home")
                     //navController.popBackStack()
                 },
+                enabled = title.isNotBlank() && location.isNotBlank(),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("메모 저장하기")
@@ -463,11 +529,13 @@ fun MemoScreen(
     var title by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
-    var selectedWeather by remember { mutableStateOf("") }
+    var selectedWeather by remember { mutableStateOf("☀️") }
     var selectedDate by remember { mutableStateOf("") }
     val imageUris = remember { mutableStateOf<List<Uri>>(emptyList()) }
     val calendar = remember { Calendar.getInstance() }
     val deletedImageUris = remember { mutableStateOf<List<Uri>>(emptyList()) } // 삭제된 이미지들 추적
+
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) } // 확대할 이미지 URI
 
 
     fun copyUriToInternalStorage(uri: Uri): Uri? {
@@ -487,8 +555,12 @@ fun MemoScreen(
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris ->
-        val savedUris = uris.take(3).mapNotNull { copyUriToInternalStorage(it) }
-        imageUris.value = savedUris
+        val currentSize = imageUris.value.size
+        val remainingSlots = 3 - currentSize
+        if (remainingSlots > 0) {
+            val newSavedUris = uris.take(remainingSlots).mapNotNull { copyUriToInternalStorage(it) }
+            imageUris.value = imageUris.value + newSavedUris
+        }
     }
 
     val datePickerDialog = DatePickerDialog(
@@ -529,6 +601,8 @@ fun MemoScreen(
             ).map { uri -> Uri.parse(uri) }
         }
     }
+
+    ZoomableImageDialog(uri = selectedImageUri) { selectedImageUri = null }
 
     memo.firstOrNull()?.let { currentMemo ->
         Column(
@@ -589,25 +663,42 @@ fun MemoScreen(
 
             OutlinedTextField(
                 value = content,
-                onValueChange = { content = it },
+                onValueChange = {
+                    if (isEditMode) {
+                        content = it
+                    }
+                },
                 label = { Text("내용") },
-                enabled = isEditMode,
+                enabled = true,
+                readOnly = !isEditMode,
+                singleLine = false,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp)
+                    .height(200.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                )
             )
 
             Text("사진 추가 (최대 3장)", style = MaterialTheme.typography.labelMedium)
             ImageSelector(
                 imageUris = imageUris.value,
                 onRemoveImage = { index ->
-                    val removed = imageUris.value[index]
+                    val removed = imageUris.value.get(index)
                     deletedImageUris.value = deletedImageUris.value + removed
                     imageUris.value = imageUris.value.toMutableList().also { it.removeAt(index) }
                 },
                 onAddImageClick = { imagePicker.launch("image/*") },
                 isEnabled = isEditMode,
-                hasGalleryPermission = hasGalleryPermission
+                hasGalleryPermission = hasGalleryPermission,
+                onImageClick = { uri -> // 이미지 클릭 시 확대 다이얼로그 표시
+                    if (!isEditMode) {
+                        selectedImageUri = uri
+                    }
+                }
             )
 
             if (!isEditMode) {
@@ -615,31 +706,33 @@ fun MemoScreen(
                     Text("편집하기")
                 }
             } else {
-                Button(onClick = {
-                    val updated = currentMemo.copy(
-                        title = title,
-                        content = content,
-                        locationName = location,
-                        weather = selectedWeather,
-                        date = selectedDate,
-                        imageUri1 = imageUris.value.getOrNull(0)?.toString(),
-                        imageUri2 = imageUris.value.getOrNull(1)?.toString(),
-                        imageUri3 = imageUris.value.getOrNull(2)?.toString()
-                    )
-                    viewModel.updateMemo(updated)
+                Button(
+                    onClick = {
+                        val updated = currentMemo.copy(
+                            title = title,
+                            content = content,
+                            locationName = location,
+                            weather = selectedWeather,
+                            date = selectedDate,
+                            imageUri1 = imageUris.value.getOrNull(0)?.toString(),
+                            imageUri2 = imageUris.value.getOrNull(1)?.toString(),
+                            imageUri3 = imageUris.value.getOrNull(2)?.toString()
+                        )
+                        viewModel.updateMemo(updated)
 
-                    // 삭제 예약된 이미지 파일 삭제
-                    deletedImageUris.value.forEach { uri ->
-                        uri.path?.let { File(it).delete() }
-                    }
-                    deletedImageUris.value = emptyList()
-                    isEditMode = false
-                }, modifier = Modifier.fillMaxWidth()) {
+                        // 삭제 예약된 이미지 파일 삭제
+                        deletedImageUris.value.forEach { uri ->
+                            uri.path?.let { File(it).delete() }
+                        }
+                        deletedImageUris.value = emptyList()
+                        isEditMode = false
+                    },
+                    enabled = title.isNotBlank() && location.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text("저장")
                 }
             }
         }
     } ?: Text("메모 불러오는 중...")
 }
-
-
