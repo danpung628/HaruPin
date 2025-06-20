@@ -69,7 +69,6 @@ fun SearchScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
     ) {
         OutlinedTextField(
             value = query,
@@ -86,7 +85,7 @@ fun SearchScreen(navController: NavController) {
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { viewModel.searchMemos(query) }),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().padding(16.dp)
         )
 
         Spacer(modifier = Modifier.height(16.dp))
