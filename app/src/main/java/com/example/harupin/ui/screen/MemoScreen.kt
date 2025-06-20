@@ -35,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -98,27 +99,49 @@ fun DateSelector(
     onClick: () -> Unit,
     isEnabled: Boolean
 ) {
-    OutlinedButton(
-        onClick = onClick,
-        enabled = isEnabled,
-        modifier = Modifier
-            .height(48.dp)
-            .width(140.dp),
-        contentPadding = PaddingValues(0.dp)
-    ) {
+    if (isEnabled) {
+        OutlinedButton(
+            onClick = onClick,
+            enabled = true,
+            modifier = Modifier
+                .height(48.dp)
+                .width(140.dp),
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DateRange,
+                    contentDescription = "날짜 선택"
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = selectedDate)
+            }
+        }
+    } else {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp),
+                .height(48.dp)
+                .width(140.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
             Icon(
                 imageVector = Icons.Default.DateRange,
-                contentDescription = "날짜 선택"
+                contentDescription = "날짜",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = selectedDate)
+            Text(
+                text = selectedDate,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
@@ -138,9 +161,10 @@ fun TitleLocationFields(
     ) {
         OutlinedTextField(
             value = title,
-            onValueChange = onTitleChange,
+            onValueChange = { if (isEnabled) onTitleChange(it) },
             label = { Text("제목") },
-            enabled = isEnabled,
+            enabled = true,
+            readOnly = !isEnabled,
             modifier = Modifier
                 .height(56.dp)
                 .weight(1f)
@@ -148,9 +172,10 @@ fun TitleLocationFields(
 
         OutlinedTextField(
             value = location,
-            onValueChange = onLocationChange,
+            onValueChange = { if (isEnabled) onLocationChange(it) },
             label = { Text("장소") },
-            enabled = isEnabled,
+            enabled = true,
+            readOnly = !isEnabled,
             modifier = Modifier
                 .height(56.dp)
                 .width(100.dp)
@@ -222,7 +247,6 @@ fun ZoomableImageDialog(
     if (uri != null) {
         AlertDialog(
             onDismissRequest = onDismiss,
-            // 🔥 여기를 content가 아닌 text로 수정합니다.
             text = {
                 Image(
                     painter = rememberAsyncImagePainter(uri),
@@ -312,7 +336,7 @@ fun MemoScreen(
     var title by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
-    var selectedWeather by remember { mutableStateOf("") }
+    var selectedWeather by remember { mutableStateOf("☀️") }
     val calendar = remember { Calendar.getInstance() }
 
     var selectedDate by remember {
@@ -448,6 +472,7 @@ fun MemoScreen(
                     navController.navigate("home")
                     //navController.popBackStack()
                 },
+                enabled = title.isNotBlank() && location.isNotBlank(),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("메모 저장하기")
@@ -504,7 +529,7 @@ fun MemoScreen(
     var title by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
-    var selectedWeather by remember { mutableStateOf("") }
+    var selectedWeather by remember { mutableStateOf("☀️") }
     var selectedDate by remember { mutableStateOf("") }
     val imageUris = remember { mutableStateOf<List<Uri>>(emptyList()) }
     val calendar = remember { Calendar.getInstance() }
@@ -638,12 +663,24 @@ fun MemoScreen(
 
             OutlinedTextField(
                 value = content,
-                onValueChange = { content = it },
+                onValueChange = {
+                    if (isEditMode) {
+                        content = it
+                    }
+                },
                 label = { Text("내용") },
-                enabled = isEditMode,
+                enabled = true,
+                readOnly = !isEditMode,
+                singleLine = false,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp)
+                    .height(200.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                )
             )
 
             Text("사진 추가 (최대 3장)", style = MaterialTheme.typography.labelMedium)
@@ -669,26 +706,30 @@ fun MemoScreen(
                     Text("편집하기")
                 }
             } else {
-                Button(onClick = {
-                    val updated = currentMemo.copy(
-                        title = title,
-                        content = content,
-                        locationName = location,
-                        weather = selectedWeather,
-                        date = selectedDate,
-                        imageUri1 = imageUris.value.getOrNull(0)?.toString(),
-                        imageUri2 = imageUris.value.getOrNull(1)?.toString(),
-                        imageUri3 = imageUris.value.getOrNull(2)?.toString()
-                    )
-                    viewModel.updateMemo(updated)
+                Button(
+                    onClick = {
+                        val updated = currentMemo.copy(
+                            title = title,
+                            content = content,
+                            locationName = location,
+                            weather = selectedWeather,
+                            date = selectedDate,
+                            imageUri1 = imageUris.value.getOrNull(0)?.toString(),
+                            imageUri2 = imageUris.value.getOrNull(1)?.toString(),
+                            imageUri3 = imageUris.value.getOrNull(2)?.toString()
+                        )
+                        viewModel.updateMemo(updated)
 
-                    // 삭제 예약된 이미지 파일 삭제
-                    deletedImageUris.value.forEach { uri ->
-                        uri.path?.let { File(it).delete() }
-                    }
-                    deletedImageUris.value = emptyList()
-                    isEditMode = false
-                }, modifier = Modifier.fillMaxWidth()) {
+                        // 삭제 예약된 이미지 파일 삭제
+                        deletedImageUris.value.forEach { uri ->
+                            uri.path?.let { File(it).delete() }
+                        }
+                        deletedImageUris.value = emptyList()
+                        isEditMode = false
+                    },
+                    enabled = title.isNotBlank() && location.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text("저장")
                 }
             }
