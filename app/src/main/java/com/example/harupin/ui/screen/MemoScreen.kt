@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -161,7 +162,8 @@ fun ImageSelector(
     onRemoveImage: (Int) -> Unit,
     onAddImageClick: () -> Unit,
     isEnabled: Boolean,
-    hasGalleryPermission: Boolean
+    hasGalleryPermission: Boolean,
+    onImageClick: (Uri) -> Unit // 콜백 추가
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
         imageUris.forEachIndexed { index, uri ->
@@ -172,6 +174,7 @@ fun ImageSelector(
                     modifier = Modifier
                         .fillMaxSize()
                         .border(1.dp, MaterialTheme.colorScheme.primary)
+                        .clickable(enabled = !isEnabled) { onImageClick(uri) } // 편집 모드가 아닐 때 클릭 가능
                 )
                 if (isEnabled) {
                     Icon(
@@ -202,6 +205,30 @@ fun ImageSelector(
     }
 }
 
+@Composable
+fun ZoomableImageDialog(
+    uri: Uri?,
+    onDismiss: () -> Unit
+) {
+    if (uri != null) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            // 🔥 여기를 content가 아닌 text로 수정합니다.
+            text = {
+                Image(
+                    painter = rememberAsyncImagePainter(uri),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(onClick = onDismiss) {
+                    Text("닫기")
+                }
+            }
+        )
+    }
+}
 
 @Composable
 fun MemoScreen(
@@ -372,7 +399,8 @@ fun MemoScreen(
             },
             onAddImageClick = { imagePicker.launch("image/*") },
             isEnabled = isEditMode,
-            hasGalleryPermission = hasGalleryPermission
+            hasGalleryPermission = hasGalleryPermission,
+            onImageClick = {} // 새 메모에서는 이미지 클릭 이벤트가 필요 없음
         )
 
 
@@ -469,6 +497,8 @@ fun MemoScreen(
     val calendar = remember { Calendar.getInstance() }
     val deletedImageUris = remember { mutableStateOf<List<Uri>>(emptyList()) } // 삭제된 이미지들 추적
 
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) } // 확대할 이미지 URI
+
 
     fun copyUriToInternalStorage(uri: Uri): Uri? {
         return try {
@@ -529,6 +559,8 @@ fun MemoScreen(
             ).map { uri -> Uri.parse(uri) }
         }
     }
+
+    ZoomableImageDialog(uri = selectedImageUri) { selectedImageUri = null }
 
     memo.firstOrNull()?.let { currentMemo ->
         Column(
@@ -601,13 +633,18 @@ fun MemoScreen(
             ImageSelector(
                 imageUris = imageUris.value,
                 onRemoveImage = { index ->
-                    val removed = imageUris.value[index]
+                    val removed = imageUris.value.get(index)
                     deletedImageUris.value = deletedImageUris.value + removed
                     imageUris.value = imageUris.value.toMutableList().also { it.removeAt(index) }
                 },
                 onAddImageClick = { imagePicker.launch("image/*") },
                 isEnabled = isEditMode,
-                hasGalleryPermission = hasGalleryPermission
+                hasGalleryPermission = hasGalleryPermission,
+                onImageClick = { uri -> // 이미지 클릭 시 확대 다이얼로그 표시
+                    if (!isEditMode) {
+                        selectedImageUri = uri
+                    }
+                }
             )
 
             if (!isEditMode) {
@@ -641,5 +678,3 @@ fun MemoScreen(
         }
     } ?: Text("메모 불러오는 중...")
 }
-
-
