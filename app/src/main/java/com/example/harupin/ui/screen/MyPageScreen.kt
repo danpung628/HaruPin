@@ -42,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -267,7 +268,15 @@ fun PageList(
     onDeleteRequest: (MemoEntity) -> Unit // 1. 콜백 함수 추가
 ) {
     if (list.isEmpty()) {
-        // ... (내용 동일)
+        Text(
+            text = "메모가 없습니다",
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            textAlign = TextAlign.Center,
+            fontSize = 16.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     } else {
         LazyColumn {
             items(list) { memo ->
