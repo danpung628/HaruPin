@@ -29,6 +29,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -163,29 +165,36 @@ fun ImageSelector(
     onAddImageClick: () -> Unit,
     isEnabled: Boolean,
     hasGalleryPermission: Boolean,
-    onImageClick: (Uri) -> Unit // 콜백 추가
+    onImageClick: (Uri) -> Unit
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
         imageUris.forEachIndexed { index, uri ->
-            Box(modifier = Modifier.size(80.dp)) {
-                Image(
-                    painter = rememberAsyncImagePainter(uri),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .border(1.dp, MaterialTheme.colorScheme.primary)
-                        .clickable(enabled = !isEnabled) { onImageClick(uri) } // 편집 모드가 아닐 때 클릭 가능
-                )
-                if (isEnabled) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "삭제",
-                        tint = Color.Red,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .size(20.dp)
-                            .clickable { onRemoveImage(index) }
+            Card(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clickable(enabled = !isEnabled) { onImageClick(uri) }, // 클릭은 Card에서만 처리
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                // Card 내부의 Box는 Card를 꽉 채우도록 fillMaxSize()를 사용하는 것이 더 좋습니다.
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Image(
+                        painter = rememberAsyncImagePainter(uri),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize() // border와 clickable을 모두 삭제!
                     )
+                    if (isEnabled) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "삭제",
+                            // 아이콘 색상도 테마에 맞게 잘 바꾸셨네요! 좋습니다.
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .size(20.dp)
+                                .clickable { onRemoveImage(index) }
+                        )
+                    }
                 }
             }
         }
@@ -292,8 +301,12 @@ fun MemoScreen(
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris ->
-        val savedUris = uris.take(3).mapNotNull { copyUriToInternalStorage(it) }
-        imageUris.value = savedUris
+        val currentSize = imageUris.value.size
+        val remainingSlots = 3 - currentSize
+        if (remainingSlots > 0) {
+            val newSavedUris = uris.take(remainingSlots).mapNotNull { copyUriToInternalStorage(it) }
+            imageUris.value = imageUris.value + newSavedUris
+        }
     }
 
     var title by remember { mutableStateOf("") }
@@ -517,8 +530,12 @@ fun MemoScreen(
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris ->
-        val savedUris = uris.take(3).mapNotNull { copyUriToInternalStorage(it) }
-        imageUris.value = savedUris
+        val currentSize = imageUris.value.size
+        val remainingSlots = 3 - currentSize
+        if (remainingSlots > 0) {
+            val newSavedUris = uris.take(remainingSlots).mapNotNull { copyUriToInternalStorage(it) }
+            imageUris.value = imageUris.value + newSavedUris
+        }
     }
 
     val datePickerDialog = DatePickerDialog(
