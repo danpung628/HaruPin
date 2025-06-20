@@ -2,22 +2,46 @@ package com.example.harupin.ui.screen
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Favorite // 하트 아이콘 추가
-import androidx.compose.material.icons.filled.FavoriteBorder // 비어있는 하트 아이콘 추가
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Star // 별 아이콘 추가
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color // 색상 처리를 위해 추가
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -141,16 +165,15 @@ fun MyPageScreen(navController: NavController) {
                             Icon(
                                 imageVector = Icons.Filled.Star,
                                 contentDescription = if (showOnlyFavorites) "전체 보기" else "즐겨찾기만 보기",
-                                tint = if (showOnlyFavorites) Color.Yellow else MaterialTheme.colorScheme.onSurface
+                                tint = if (showOnlyFavorites) {
+                                    MaterialTheme.colorScheme.primary // 활성화 시 테마의 primary 색상 사용
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant // 비활성화 시 약간 연한 회색
+                                }
                             )
                         }
                     }
                 )
-            },
-            floatingActionButton = {
-                FloatingActionButton(onClick = { /* 메모 추가 화면으로 이동 */ }) {
-                    Icon(Icons.Default.Add, contentDescription = "메모 추가")
-                }
             }
         ) { contentPadding ->
             Column(
@@ -165,7 +188,11 @@ fun MyPageScreen(navController: NavController) {
                         viewModel.updateMemoFavorite(
                             memo.id,
                             !(memo.isFavorite ?: false)
-                        ) // 즐겨찾기 상태 토글
+                        )
+                    },
+                    // 👇 이 부분을 추가하여 삭제 요청을 처리합니다.
+                    onDeleteRequest = { memo ->
+                        viewModel.deleteMemo(memo)
                     }
                 )
             }
@@ -236,18 +263,11 @@ fun DrawerContent(
 fun PageList(
     list: List<MemoEntity>,
     navController: NavController,
-    onFavoriteToggle: (MemoEntity) -> Unit // 즐겨찾기 토글 콜백 추가
+    onFavoriteToggle: (MemoEntity) -> Unit,
+    onDeleteRequest: (MemoEntity) -> Unit // 1. 콜백 함수 추가
 ) {
     if (list.isEmpty()) {
-        Text(
-            text = "메모가 없습니다",
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            textAlign = TextAlign.Center,
-            fontSize = 16.sp,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        // ... (내용 동일)
     } else {
         LazyColumn {
             items(list) { memo ->
@@ -255,7 +275,8 @@ fun PageList(
                     memo = memo,
                     modifier = Modifier,
                     onClicked = { navController.navigate("memo?id=${memo.id}") },
-                    onFavoriteToggle = onFavoriteToggle // 즐겨찾기 토글 콜백 전달
+                    onFavoriteToggle = onFavoriteToggle,
+                    onDeleteRequest = onDeleteRequest // 2. Page에게 그대로 전달
                 )
             }
         }
@@ -267,20 +288,15 @@ fun Page(
     memo: MemoEntity,
     modifier: Modifier = Modifier,
     onClicked: () -> Unit,
-    onFavoriteToggle: (MemoEntity) -> Unit // 즐겨찾기 토글 콜백 추가
+    onFavoriteToggle: (MemoEntity) -> Unit,
+    onDeleteRequest: (MemoEntity) -> Unit
 ) {
-    val context = LocalContext.current
-    val db = MemoDatabase.getDatabase(context)
-    val viewModelFactory = MemoViewModelFactory(MemoRepository(db))
-    val viewModel: MemoViewModel = viewModel(factory = viewModelFactory)
-
-
     var showDialog by remember { mutableStateOf(false) }
 
     if (showDialog) {
         DeleteConfirmDialog(
             onConfirm = {
-                viewModel.deleteMemo(memo)
+                onDeleteRequest(memo)
                 showDialog = false
             },
             onDismiss = {
@@ -289,37 +305,69 @@ fun Page(
         )
     }
 
-    Row(
+    val cardContainerColor = if (memo.isFavorite == true) {
+        MaterialTheme.colorScheme.primaryContainer // 즐겨찾기된 카드의 배경색
+    } else {
+        CardDefaults.cardColors().containerColor // 기본 카드 배경색
+    }
+
+
+    Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(10.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clickable(onClick = onClicked),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = cardContainerColor
+        )
     ) {
-        Column(
+        Row(
             modifier = Modifier
-                .weight(1f)
                 .combinedClickable(
                     onLongClick = { showDialog = true },
-                    onClick = onClicked,
+                    onClick = onClicked
                 )
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = memo.title, fontSize = 18.sp)
-            Text(text = "날짜: ${memo.date} ${memo.time}", fontSize = 14.sp)
-            Text(text = "위치: ${memo.locationName ?: "N/A"}", fontSize = 14.sp)
-        }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp) // 텍스트 사이 간격 추가
+            ) {
+                Text(
+                    text = memo.title,
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text(
+                    text = "날짜: ${memo.date} ${memo.time}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "장소: ${memo.locationName ?: "N/A"}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
-        // 즐겨찾기 하트 버튼 추가
-        IconButton(
-            onClick = { onFavoriteToggle(memo) }
-        ) {
-            Icon(
-                imageVector = if (memo.isFavorite == true) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                contentDescription = if (memo.isFavorite == true) "즐겨찾기 해제" else "즐겨찾기 추가",
-                tint = if (memo.isFavorite == true) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-            )
+            IconButton(
+                onClick = { onFavoriteToggle(memo) }
+            ) {
+                Icon(
+                    imageVector = if (memo.isFavorite == true) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    contentDescription = if (memo.isFavorite == true) "즐겨찾기 해제" else "즐겨찾기 추가",
+                    tint = if (memo.isFavorite == true) {
+                        MaterialTheme.colorScheme.primary // 활성화 시 primary 색상으로 통일
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant // 비활성화 시 약간 연한 회색
+                    }
+                )
+            }
         }
     }
-    Spacer(modifier = Modifier.height(8.dp))
+
 }
 
 
